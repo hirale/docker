@@ -1,0 +1,34 @@
+server {
+	listen 80;
+	listen [::]:80;
+
+	server_name domain.com;
+	set $base /var/www/html;
+	root $base/;
+
+	# index.php
+	index index.php;
+
+	# index.php fallback
+	location / {
+		try_files $uri $uri/ /index.php?$query_string;
+	}
+
+	# handle .php
+	location ~ \.php$ {
+		include php/php72_fastcgi.conf;
+	}
+
+	include sites-conf/general.conf;
+	include sites-conf/pagespeed.conf;
+}
+
+# subdomains redirect
+server {
+	listen 80;
+	listen [::]:80;
+
+	server_name *.domain.com;
+
+	return 301 http://domain.com$request_uri;
+}

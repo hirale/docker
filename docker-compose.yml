@@ -1,0 +1,204 @@
+version: "3.7"
+services:
+  portainer:
+    image: portainer/portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    container_name: portainer
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.14
+  ssl:
+    build: nginx-ssl
+    container_name: nginx_ssl
+    volumes:
+      - ${NGINXSSL_CONFIG}:/etc/nginx
+    restart: always
+    ports:
+      - 443:443
+    networks:
+      frontend:
+        ipv4_address: 172.10.0.2
+      backend:
+        ipv4_address: 172.20.0.2
+    depends_on:
+      - nginx
+      - varnish
+  varnish:
+    build: varnish
+    container_name: varnish
+    volumes:
+      - ./varnish/conf:/etc/varnish
+    environment:
+      VARNISH_PORT: 80
+      VARNISH_RAM_STORAGE: 256M
+      VARNISH_VCL_PATH: /etc/varnish/default.vcl
+      VARNISHD_ADDITIONAL_OPTS: -t 36000
+      VARNISHLOG: "true"
+      VARNISHLOG_OPTS: -g session
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.3
+    depends_on:
+      - nginx
+  nginx:
+    build:
+      context: nginx/
+      args:
+        MAKE_J: 4
+        NGINX_VERSION: ${NGINX_VERSION}
+        PAGESPEED_VERSION: ${PAGESPEED_VERSION}
+        LIBPNG_VERSION: ${LIBPNG_VERSION}
+    container_name: nginx
+    working_dir: /var/www/html
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html
+      - ${NGINX_CONFIG}:/etc/nginx
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.4
+    depends_on:
+      - php-fpm71
+      - php-fpm72
+  php-fpm71:
+    build: php-fpm71
+    container_name: php-fpm71
+    working_dir: /var/www/html/
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html/
+      - ${PHP71_CONFIG}:/usr/local/etc/php
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.5
+    depends_on:
+      - redis
+      - mysql
+      - memcached
+  php-fpm72:
+    build: php-fpm72
+    container_name: php-fpm72
+    working_dir: /var/www/html/
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html/
+      - ${PHP72_CONFIG}:/usr/local/etc/php
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.6
+    depends_on:
+      - redis
+      - mysql
+      - memcached
+  memcached:
+    image: "memcached:latest"
+    container_name: memcached
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.7
+  mysql:
+    image: mysql:5.7.25
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=${MYSQL_TZ}
+    ports:
+      - 3306:3306
+    volumes:
+      - ${MYSQL_DATA}:/var/lib/mysql
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.8
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - 1025:1025
+      - 8025:8025
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.9
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      backend:
+        ipv4_address: 172.20.0.10
+  elasticsearch:
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    container_name: elasticsearch
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      ES_JAVA_OPTS: -Xmx256m -Xms256m
+    networks:
+      backend:
+        ipv4_address: 172.20.0.11
+  logstash:
+    build:
+      context: logstash/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    container_name: logstash
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - 5000:5000
+      - 9600:9600
+    environment:
+      LS_JAVA_OPTS: -Xmx256m -Xms256m
+    networks:
+      backend:
+        ipv4_address: 172.20.0.12
+    depends_on:
+      - elasticsearch
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    container_name: kibana
+    volumes:
+      - ./kibana/config/:/usr/share/kibana/config:ro
+    ports:
+      - 5601:5601
+    networks:
+      backend:
+        ipv4_address: 172.20.0.13
+    depends_on:
+      - elasticsearch
+volumes:
+  portainer_data:
+networks:
+  frontend:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.10.0.0/16
+  backend:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
