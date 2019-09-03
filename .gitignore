@@ -1,0 +1,4 @@
+mysql/*
+nginx-ssl/ssl/*
+.env
+elasticsearch/data/*
