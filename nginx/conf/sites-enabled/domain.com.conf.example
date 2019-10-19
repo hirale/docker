@@ -8,6 +8,9 @@ server {
 
 	# index.php
 	index index.php;
+	
+	access_log /dev/null;
+	error_log /dev/stderr;
 
 	# index.php fallback
 	location / {
