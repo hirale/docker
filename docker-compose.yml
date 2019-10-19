@@ -46,7 +46,7 @@ services:
       - nginx
   nginx:
     build:
-      context: nginx/
+      context: ./nginx
       args:
         MAKE_J: 4
         NGINX_VERSION: ${NGINX_VERSION}
@@ -65,7 +65,10 @@ services:
       - php-fpm71
       - php-fpm72
   php-fpm71:
-    build: php-fpm71
+    build:
+      context: ./php-fpm71
+      args:
+        PHP_71VERSION: ${PHP_71VERSION}
     container_name: php-fpm71
     working_dir: /var/www/html/
     volumes:
@@ -75,12 +78,17 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.5
+    secrets:
+      - host_ssh_key
     depends_on:
       - redis
       - mysql
       - memcached
   php-fpm72:
-    build: php-fpm72
+    build:
+      context: ./php-fpm72
+      args:
+        PHP_72VERSION: ${PHP_72VERSION}
     container_name: php-fpm72
     working_dir: /var/www/html/
     volumes:
@@ -90,6 +98,28 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.6
+    secrets:
+      - host_ssh_key
+    depends_on:
+      - redis
+      - mysql
+      - memcached
+  php-fpm73:
+    build:
+      context: ./php-fpm73
+      args:
+        PHP_73VERSION: ${PHP_73VERSION}
+    container_name: php-fpm73
+    working_dir: /var/www/html/
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html/
+      - ${PHP73_CONFIG}:/usr/local/etc/php
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.7
+    secrets:
+      - host_ssh_key
     depends_on:
       - redis
       - mysql
@@ -100,9 +130,9 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.7
+        ipv4_address: 172.20.0.8
   mysql:
-    image: mysql:5.7.25
+    image: mysql:${MYSQL_VERSION}
     container_name: mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -118,7 +148,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.8
+        ipv4_address: 172.20.0.9
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
@@ -128,22 +158,21 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.9
+        ipv4_address: 172.20.0.10
   redis:
     image: redis:latest
     container_name: redis
     restart: always
-    ports:
-      - 6379:6379
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.11
   elasticsearch:
     build:
-      context: elasticsearch/
+      context: ./elasticsearch
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: elasticsearch
+    restart: always
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./elasticsearch/data:/usr/share/elasticsearch/data
@@ -154,39 +183,38 @@ services:
       ES_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.20.0.12
   logstash:
     build:
-      context: logstash/
+      context: ./logstash
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: logstash
+    restart: always
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-    ports:
-      - 5000:5000
-      - 9600:9600
     environment:
       LS_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.12
+        ipv4_address: 172.20.0.13
     depends_on:
       - elasticsearch
   kibana:
     build:
-      context: kibana/
+      context: ./kibana
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: kibana
+    restart: always
     volumes:
       - ./kibana/config/:/usr/share/kibana/config:ro
     ports:
       - 5601:5601
     networks:
       backend:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.20.0.14
     depends_on:
       - elasticsearch
 volumes:
@@ -202,3 +230,6 @@ networks:
       driver: default
       config:
         - subnet: 172.20.0.0/16
+secrets:
+  host_ssh_key:
+    file: ~/.ssh/id_rsa
