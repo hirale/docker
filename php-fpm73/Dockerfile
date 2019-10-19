@@ -7,6 +7,7 @@ WORKDIR /usr/share/nginx/html
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
+    openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
@@ -14,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmemcached-dev \
     unzip \
     zip \
+    libzip-dev \
     zlib1g-dev \
     libxslt-dev \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
