@@ -214,7 +214,7 @@ services:
       - 5601:5601
     networks:
       backend:
-        ipv4_address: 172.20.0.14
+        ipv4_address: 172.20.0.15
     depends_on:
       - elasticsearch
 volumes:
@@ -232,4 +232,4 @@ networks:
         - subnet: 172.20.0.0/16
 secrets:
   host_ssh_key:
-    file: ~/.ssh/id_rsa
+    file: ~/.ssh/id_ed25519
