@@ -98,8 +98,6 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.6
-    secrets:
-      - host_ssh_key
     depends_on:
       - redis
       - mysql
@@ -118,12 +116,25 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.7
-    secrets:
-      - host_ssh_key
     depends_on:
       - redis
       - mysql
       - memcached
+  webhook:
+    build:
+      context: ./webhook
+      args:
+        PHP_73VERSION: ${PHP_73VERSION}
+    container_name: webhook
+    working_dir: /var/www/html/
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html/
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.16
+    secrets:
+      - host_ssh_key
   memcached:
     image: "memcached:latest"
     container_name: memcached
