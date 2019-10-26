@@ -37,9 +37,7 @@ RUN chmod +x /usr/local/bin/mhsendmail
 RUN usermod -u 1000 www-data
 
 # cron
-RUN touch /var/log/schedule.log
-RUN chmod 0777 /var/log/schedule.log
-ADD scheduler /etc/cron.d/scheduler
+ADD cron/scheduler /etc/cron.d/scheduler
 RUN crontab /etc/cron.d/scheduler
 
 CMD ["cron", "-f"]
