@@ -62,6 +62,8 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
     --add-module=/usr/src/headers-more-nginx-module \
     --with-cc-opt=-Wno-error \
     " \
+    && addgroup -S www-data \
+    && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G www-data www-data \
     && apk add --no-cache --virtual .build-deps \
     gcc \
     libc-dev \
