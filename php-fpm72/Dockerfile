@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     cron \
     git \
+    supervisor \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -40,4 +41,4 @@ RUN usermod -u 1000 www-data
 ADD cron/scheduler /etc/cron.d/scheduler
 RUN crontab /etc/cron.d/scheduler
 
-CMD cron -f && php-fpm
+CMD ["/usr/bin/supervisord"]
