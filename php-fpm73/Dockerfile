@@ -7,6 +7,7 @@ WORKDIR /usr/share/nginx/html
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
+    cron \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -35,3 +36,11 @@ COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
 RUN chmod +x /usr/local/bin/mhsendmail
 
 RUN usermod -u 1000 www-data
+
+# cron
+RUN touch /var/log/schedule.log
+RUN chmod 0777 /var/log/schedule.log
+ADD scheduler /etc/cron.d/scheduler
+RUN crontab /etc/cron.d/scheduler
+
+CMD ["cron", "-f"]
