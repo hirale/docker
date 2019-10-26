@@ -7,6 +7,7 @@ WORKDIR /var/www/html/
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     cron \
+    supervisor \
     git \
     openssh-client \
     libfreetype6-dev \
@@ -41,4 +42,4 @@ RUN usermod -u 1000 www-data
 ADD cron/scheduler /etc/cron.d/scheduler
 RUN crontab /etc/cron.d/scheduler
 
-CMD cron -f && php-fpm
+CMD ["/usr/bin/supervisord"]
