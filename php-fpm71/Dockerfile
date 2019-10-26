@@ -6,6 +6,7 @@ WORKDIR /var/www/html/
 # bcmath pdo_mysql intl gd zip opcache xdebug redis memcached
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
+    cron \
     git \
     openssh-client \
     libfreetype6-dev \
@@ -35,3 +36,11 @@ COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
 RUN chmod +x /usr/local/bin/mhsendmail
 
 RUN usermod -u 1000 www-data
+
+# cron
+RUN touch /var/log/schedule.log
+RUN chmod 0777 /var/log/schedule.log
+ADD scheduler /etc/cron.d/scheduler
+RUN crontab /etc/cron.d/scheduler
+
+CMD ["cron", "-f"]
