@@ -9,7 +9,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.14
+        ipv4_address: 172.20.0.2
   ssl:
     build: nginx-ssl
     container_name: nginx_ssl
@@ -22,18 +22,6 @@ services:
     networks:
       frontend:
         ipv4_address: 172.10.0.2
-      backend:
-        ipv4_address: 172.20.0.2
-    depends_on:
-      - nginx
-      - varnish
-  varnish:
-    image: varnish:latest
-    container_name: varnish
-    volumes:
-      - ./varnish/conf:/etc/varnish
-    restart: always
-    networks:
       backend:
         ipv4_address: 172.20.0.3
     depends_on:
@@ -67,7 +55,7 @@ services:
     working_dir: /var/www/html/
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
-      - ${PHP71_CONFIG}:/usr/local/etc/php
+      - ${PHP71_CONFIG}:/usr/local/etc/
       - ${PHP71_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
@@ -88,7 +76,7 @@ services:
     working_dir: /var/www/html/
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
-      - ${PHP72_CONFIG}:/usr/local/etc/php
+      - ${PHP72_CONFIG}:/usr/local/etc/
       - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
@@ -107,7 +95,7 @@ services:
     working_dir: /var/www/html/
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
-      - ${PHP73_CONFIG}:/usr/local/etc/php
+      - ${PHP73_CONFIG}:/usr/local/etc/
       - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
@@ -129,7 +117,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.16
+        ipv4_address: 172.20.0.8
     secrets:
       - host_ssh_key
   memcached:
@@ -138,7 +126,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.8
+        ipv4_address: 172.20.0.9
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
@@ -156,7 +144,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.9
+        ipv4_address: 172.20.0.10
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
@@ -166,14 +154,14 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.11
   redis:
     image: redis:latest
     container_name: redis
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.20.0.12
   elasticsearch:
     build:
       context: ./elasticsearch
@@ -191,7 +179,7 @@ services:
       ES_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.12
+        ipv4_address: 172.20.0.13
   logstash:
     build:
       context: ./logstash
@@ -206,7 +194,7 @@ services:
       LS_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.20.0.14
     depends_on:
       - elasticsearch
   kibana:
