@@ -75,8 +75,7 @@ services:
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
       - ${PHP71_CONFIG}:/usr/local/etc/php
-      - ${PHP71_CRON}:/etc/cron.d
-      - ./php-fpm71/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ${PHP71_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
       backend:
@@ -97,8 +96,7 @@ services:
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
       - ${PHP72_CONFIG}:/usr/local/etc/php
-      - ${PHP72_CRON}:/etc/cron.d
-      - ./php-fpm72/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
       backend:
@@ -117,8 +115,7 @@ services:
     volumes:
       - ${NGINX_ROOT}:/var/www/html/
       - ${PHP73_CONFIG}:/usr/local/etc/php
-      - ${PHP73_CRON}:/etc/cron.d
-      - ./php-fpm73/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     networks:
       backend:
