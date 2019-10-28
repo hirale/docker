@@ -8,6 +8,7 @@ import std;
 acl purge {
         "php-fpm71";
         "php-fpm72";
+        "php-fpm73";
 }
 
 sub vcl_hit {

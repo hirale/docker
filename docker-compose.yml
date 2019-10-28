@@ -28,17 +28,10 @@ services:
       - nginx
       - varnish
   varnish:
-    build: varnish
+    image: varnish:latest
     container_name: varnish
     volumes:
       - ./varnish/conf:/etc/varnish
-    environment:
-      VARNISH_PORT: 80
-      VARNISH_RAM_STORAGE: 256M
-      VARNISH_VCL_PATH: /etc/varnish/default.vcl
-      VARNISHD_ADDITIONAL_OPTS: -t 36000
-      VARNISHLOG: "true"
-      VARNISHLOG_OPTS: -g session
     restart: always
     networks:
       backend:
