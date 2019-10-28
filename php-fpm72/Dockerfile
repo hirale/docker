@@ -37,8 +37,4 @@ RUN chmod +x /usr/local/bin/mhsendmail
 
 RUN usermod -u 1000 www-data
 
-# cron
-ADD cron/scheduler /etc/cron.d/scheduler
-RUN crontab /etc/cron.d/scheduler
-
 CMD ["/usr/bin/supervisord"]
