@@ -18,7 +18,6 @@ services:
     restart: always
     ports:
       - 443:443
-      - 443:443/udp
     networks:
       frontend:
         ipv4_address: 172.10.0.2
