@@ -20,10 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libxslt-dev \
     libmcrypt-dev \
+    libsodium-dev \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl json opcache soap mcrypt mysqli \
+    && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl json opcache soap mcrypt mysqli sodium \
     && pecl install redis memcached \
     && docker-php-ext-enable redis memcached \
     && apt-get clean \
