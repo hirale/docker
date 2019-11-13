@@ -57,6 +57,8 @@ services:
       - ${PHP71_CONFIG}:/usr/local/etc/
       - ${PHP71_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
+    ports:
+      - 9001:9001
     networks:
       backend:
         ipv4_address: 172.20.0.5
@@ -78,6 +80,8 @@ services:
       - ${PHP72_CONFIG}:/usr/local/etc/
       - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
+    ports:
+      - 9002:9002
     networks:
       backend:
         ipv4_address: 172.20.0.6
@@ -97,6 +101,8 @@ services:
       - ${PHP73_CONFIG}:/usr/local/etc/
       - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
+    ports:
+      - 9003:9003
     networks:
       backend:
         ipv4_address: 172.20.0.7
