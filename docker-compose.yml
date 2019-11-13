@@ -43,31 +43,8 @@ services:
       backend:
         ipv4_address: 172.20.0.4
     depends_on:
-      - php-fpm71
+      - php-fpm73
       - php-fpm72
-  php-fpm71:
-    build:
-      context: ./php-fpm71
-      args:
-        PHP_71VERSION: ${PHP_71VERSION}
-    container_name: php-fpm71
-    working_dir: /var/www/html/
-    volumes:
-      - ${NGINX_ROOT}:/var/www/html/
-      - ${PHP71_CONFIG}:/usr/local/etc/
-      - ${PHP71_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-    restart: always
-    ports:
-      - 9001:9001
-    networks:
-      backend:
-        ipv4_address: 172.20.0.5
-    secrets:
-      - host_ssh_key
-    depends_on:
-      - redis
-      - mysql
-      - memcached
   php-fpm72:
     build:
       context: ./php-fpm72
@@ -80,8 +57,6 @@ services:
       - ${PHP72_CONFIG}:/usr/local/etc/
       - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
-    ports:
-      - 9002:9002
     networks:
       backend:
         ipv4_address: 172.20.0.6
@@ -101,8 +76,6 @@ services:
       - ${PHP73_CONFIG}:/usr/local/etc/
       - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
     restart: always
-    ports:
-      - 9003:9003
     networks:
       backend:
         ipv4_address: 172.20.0.7
