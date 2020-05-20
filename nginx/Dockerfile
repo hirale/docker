@@ -15,6 +15,7 @@ RUN apt-get update -y && \
 
 RUN apt-get install -y \
         apt-utils \
+        wget \
         git nano \
         g++ \
         gcc \
@@ -46,7 +47,7 @@ RUN apt-get install -y \
 
 # Build libpng
 RUN cd /tmp && \
-        curl -L https://netix.dl.sourceforge.net/project/libpng/libpng16/${LIBPNG_VERSION}/libpng-${LIBPNG_VERSION}.tar.gz | tar -zx && \
+        wget -O- ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-${LIBPNG_VERSION}.tar.gz | tar -zx && \
         cd /tmp/libpng-${LIBPNG_VERSION} && \
         ./configure --build=$CBUILD --host=$CHOST --prefix=/usr --enable-shared --with-libpng-compat && \
         make -j${MAKE_J} install V=0
