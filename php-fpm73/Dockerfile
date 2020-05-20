@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl opcache soap sodium \
+    && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl opcache mysqli soap sodium \
     && pecl install redis memcached xdebug \
     && docker-php-ext-enable redis memcached xdebug \
     && apt-get clean \
@@ -33,12 +33,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+RUN mkdir -p /var/run/php
 # Mailhog
 COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
 RUN chmod +x /usr/local/bin/mhsendmail
-
-#crontab
-RUN crontab /root/crontab
 
 RUN usermod -u 1000 www-data
 

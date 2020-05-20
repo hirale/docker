@@ -56,7 +56,7 @@ services:
       - ${NGINX_ROOT}:/var/www/html/
       - ${PHP72_CONFIG}:/usr/local/etc/
       - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB72}:/root/crontab
+      - ${CRONTAB72}:/etc/cron.d/
     restart: always
     networks:
       backend:
@@ -76,7 +76,7 @@ services:
       - ${NGINX_ROOT}:/var/www/html/
       - ${PHP73_CONFIG}:/usr/local/etc/
       - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB73}:/root/crontab
+      - ${CRONTAB73}:/etc/cron.d/
     restart: always
     networks:
       backend:

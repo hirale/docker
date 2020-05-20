@@ -1,0 +1,1 @@
+# * * * * * root /usr/local/bin/php /var/www/html/magento2/update/cron.php >> /var/www/html/magento2/var/log/update.cron.log
