@@ -37,6 +37,9 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
 RUN chmod +x /usr/local/bin/mhsendmail
 
+#crontab
+RUN crontab /root/crontab
+
 RUN usermod -u 1000 www-data
 
 CMD ["/usr/bin/supervisord"]
