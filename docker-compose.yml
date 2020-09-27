@@ -85,6 +85,26 @@ services:
       - redis
       - mysql
       - memcached
+  php-fpm74:
+    build:
+      context: ./php-fpm73
+      args:
+        PHP_74VERSION: ${PHP_74VERSION}
+    container_name: php-fpm74
+    working_dir: /var/www/html/
+    volumes:
+      - ${NGINX_ROOT}:/var/www/html/
+      - ${PHP74_CONFIG}:/usr/local/etc/
+      - ${PHP74_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
+      - ${CRONTAB74}:/var/spool/cron/crontabs/
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.8
+    depends_on:
+      - redis
+      - mysql
+      - memcached
   webhook:
     build:
       context: ./webhook
@@ -97,7 +117,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.8
+        ipv4_address: 172.20.0.9
     secrets:
       - host_ssh_key
   memcached:
@@ -106,7 +126,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.9
+        ipv4_address: 172.20.0.10
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
@@ -124,7 +144,7 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.11
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
@@ -134,14 +154,14 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.20.0.12
   redis:
     image: redis:latest
     container_name: redis
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.12
+        ipv4_address: 172.20.0.13
   elasticsearch:
     build:
       context: ./elasticsearch
@@ -159,7 +179,7 @@ services:
       ES_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.20.0.14
   logstash:
     build:
       context: ./logstash
@@ -174,7 +194,7 @@ services:
       LS_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
-        ipv4_address: 172.20.0.14
+        ipv4_address: 172.20.0.15
     depends_on:
       - elasticsearch
   kibana:
@@ -190,7 +210,7 @@ services:
       - 5601:5601
     networks:
       backend:
-        ipv4_address: 172.20.0.15
+        ipv4_address: 172.20.0.16
     depends_on:
       - elasticsearch
 volumes:
