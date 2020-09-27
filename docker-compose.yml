@@ -87,7 +87,7 @@ services:
       - memcached
   php-fpm74:
     build:
-      context: ./php-fpm73
+      context: ./php-fpm74
       args:
         PHP_74VERSION: ${PHP_74VERSION}
     container_name: php-fpm74
