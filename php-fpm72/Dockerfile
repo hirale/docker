@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl opcache soap mysqli sodium\
     && pecl install redis memcached xdebug \
-    && docker-php-ext-enable redis memcached xdebug \
+    && docker-php-ext-enable redis memcached \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
 
