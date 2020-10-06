@@ -25,6 +25,16 @@ services:
         ipv4_address: 172.20.0.3
     depends_on:
       - nginx
+  apache:
+    image: httpd:latest
+    container_name: apache
+    volumes:
+        - ${WEB_ROOT}:/var/www/html
+        - ${APACHE_CONFIG}:/usr/local/apache2/conf
+    networks:
+      backend:
+        ipv4_address: 172.20.0.17
+    restart: always
   nginx:
     build:
       context: ./nginx
@@ -36,7 +46,7 @@ services:
     container_name: nginx
     working_dir: /var/www/html
     volumes:
-      - ${NGINX_ROOT}:/var/www/html
+      - ${WEB_ROOT}:/var/www/html
       - ${NGINX_CONFIG}:/etc/nginx
     restart: always
     networks:
@@ -53,7 +63,7 @@ services:
     container_name: php-fpm72
     working_dir: /var/www/html/
     volumes:
-      - ${NGINX_ROOT}:/var/www/html/
+      - ${WEB_ROOT}:/var/www/html/
       - ${PHP72_CONFIG}:/usr/local/etc/
       - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
       - ${CRONTAB72}:/var/spool/cron/crontabs/
@@ -73,7 +83,7 @@ services:
     container_name: php-fpm73
     working_dir: /var/www/html/
     volumes:
-      - ${NGINX_ROOT}:/var/www/html/
+      - ${WEB_ROOT}:/var/www/html/
       - ${PHP73_CONFIG}:/usr/local/etc/
       - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
       - ${CRONTAB73}:/var/spool/cron/crontabs/
@@ -93,7 +103,7 @@ services:
     container_name: php-fpm74
     working_dir: /var/www/html/
     volumes:
-      - ${NGINX_ROOT}:/var/www/html/
+      - ${WEB_ROOT}:/var/www/html/
       - ${PHP74_CONFIG}:/usr/local/etc/
       - ${PHP74_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
       - ${CRONTAB74}:/var/spool/cron/crontabs/
@@ -113,7 +123,7 @@ services:
     container_name: webhook
     working_dir: /var/www/html/
     volumes:
-      - ${NGINX_ROOT}:/var/www/html/
+      - ${WEB_ROOT}:/var/www/html/
     restart: always
     networks:
       backend:
