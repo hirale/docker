@@ -88,8 +88,6 @@ RUN cd /tmp && \
         --with-threads \
         --with-stream \
         --with-stream_ssl_module \
-        --without-http_autoindex_module \
-        --without-http_browser_module \
         --without-http_memcached_module \
         --without-http_userid_module \
         --without-mail_pop3_module \
@@ -125,7 +123,7 @@ RUN rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
 
 EXPOSE 80
 WORKDIR /var/www/html
-RUN usermod -u 1000 www-data
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
 
 STOPSIGNAL SIGTERM
 

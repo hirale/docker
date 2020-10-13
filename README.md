@@ -19,6 +19,7 @@ A step by step series of examples that tell you how to get a development env run
 - copy .env.example to .env
 - set up your domain conf in nginx&nginx-ssl
 - set up your ssl
+- add your vhost in apache/extra/httpd-vhosts.conf
 
 ```console
 foo@bar:~$ cp .env.example .env 
@@ -30,6 +31,13 @@ When you finished, you can run it up.
 
 ```
 docker-compose -p the_name_u_want up -d
+```
+
+enter container as www-data
+
+```console
+foo@bar:~$ docker exec -it -u www-data php-fpm /bin/bash
+foo@bar:~$ docker exec -it -u www-data apache /bin/bash
 ```
 
 ## License

@@ -4,7 +4,6 @@ types {
   text/xml                              xml rss;
   image/gif                             gif;
   image/jpeg                            jpeg jpg;
-  image/svg+xml                         svg;
   application/x-javascript              js;
   text/plain                            txt;
   text/x-component                      htc;
