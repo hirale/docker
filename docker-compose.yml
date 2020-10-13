@@ -102,7 +102,7 @@ services:
         ipv4_address: 172.20.0.8
   mysql8:
     image: mysql:${MYSQL8_VERSION}
-    container_name: mysql
+    container_name: mysql8
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_ROOT_HOST=%
@@ -111,7 +111,7 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - TZ=${MYSQL_TZ}
     ports:
-      - 3306:3306
+      - 3308:3306
     volumes:
       - ${MYSQL8_DATA}:/var/lib/mysql
     restart: on-failure
@@ -186,8 +186,8 @@ services:
     depends_on:
       - elasticsearch
   logspout:
-    build:
-      context: ./logspout
+    image: gliderlabs/logspout:latest
+    container_name: logspout
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:

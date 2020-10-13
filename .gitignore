@@ -1,4 +1,7 @@
 mysql/*
-nginx-ssl/ssl/*
+mysql8/*
+nginx/ssl/*
+!nginx/ssl/domain.com.crt
+!nginx/ssl/domain.com.key
 .env
 elasticsearch/data/*
