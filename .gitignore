@@ -2,6 +2,6 @@ mysql/*
 mysql8/*
 nginx/ssl/*
 nginx/conf/*.conf
-apache/conf/extra/httpd-vhost.conf
+apache/conf/extra/httpd-vhosts.conf
 .env
 elasticsearch/data/*
