@@ -1,6 +1,6 @@
 mysql/*
 mysql8/*
-nginx/ssl/*
+nginx/conf/ssl/*
 nginx/conf/sites-enabled/*.conf
 apache/conf/extra/httpd-vhosts.conf
 .env
