@@ -1,7 +1,7 @@
 mysql/*
 mysql8/*
 nginx/ssl/*
-!nginx/ssl/domain.com.crt
-!nginx/ssl/domain.com.key
+nginx/conf/*.conf
+apache/conf/extra/httpd-vhost.conf
 .env
 elasticsearch/data/*

@@ -1,5 +1,0 @@
-*.conf
-!mail.domain.com.conf
-!kibana.domain.com.conf
-!portainer.domain.com.conf
-!rabbitmq.domain.com.conf
