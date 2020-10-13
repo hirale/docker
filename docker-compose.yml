@@ -1,4 +1,4 @@
-version: "3.7"
+version: "3.8"
 services:
   portainer:
     image: portainer/portainer-ce
@@ -6,35 +6,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     container_name: portainer
-    restart: always
+    restart: on-failure
     networks:
       backend:
         ipv4_address: 172.20.0.2
-  ssl:
-    build: nginx-ssl
-    container_name: nginx_ssl
-    volumes:
-      - ${NGINXSSL_CONFIG}:/etc/nginx
-    restart: always
-    ports:
-      - 443:443
-    networks:
-      frontend:
-        ipv4_address: 172.10.0.2
-      backend:
-        ipv4_address: 172.20.0.3
-    depends_on:
-      - nginx
-  apache:
-    image: httpd:latest
-    container_name: apache
-    volumes:
-        - ${WEB_ROOT}:/var/www/html
-        - ${APACHE_CONFIG}:/usr/local/apache2/conf
-    networks:
-      backend:
-        ipv4_address: 172.20.0.17
-    restart: always
   nginx:
     build:
       context: ./nginx
@@ -44,30 +19,55 @@ services:
         PAGESPEED_VERSION: ${PAGESPEED_VERSION}
         LIBPNG_VERSION: ${LIBPNG_VERSION}
     container_name: nginx
-    working_dir: /var/www/html
     volumes:
-      - ${WEB_ROOT}:/var/www/html
       - ${NGINX_CONFIG}:/etc/nginx
-    restart: always
+    restart: on-failure
+    ports:
+      - 443:443
+    networks:
+      backend:
+        ipv4_address: 172.20.0.3
+    depends_on:
+      - varnish
+  varnish:
+    image: varnish:latest
+    container_name: varnish
+    volumes:
+      - ${VARNISH_CONFIG}:/etc/varnish
+    restart: on-failure
     networks:
       backend:
         ipv4_address: 172.20.0.4
     depends_on:
-      - php-fpm73
-      - php-fpm72
-  php-fpm72:
+      - apache
+  apache:
+    image: httpd:latest
     build:
-      context: ./php-fpm72
-      args:
-        PHP_72VERSION: ${PHP_72VERSION}
-    container_name: php-fpm72
-    working_dir: /var/www/html/
+      context: ./apache
+      args: 
+        APACHE_VERSION: ${APACHE_VERSION}
+    container_name: apache
     volumes:
-      - ${WEB_ROOT}:/var/www/html/
-      - ${PHP72_CONFIG}:/usr/local/etc/
-      - ${PHP72_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB72}:/var/spool/cron/crontabs/
-    restart: always
+      - ${WEB_ROOT}:/usr/local/apache2/htdocs
+      - ${APACHE_CONFIG}:/usr/local/apache2/conf
+    networks:
+      backend:
+        ipv4_address: 172.20.0.5
+    restart: on-failure
+    depends_on:
+      - php-fpm
+  php-fpm:
+    build:
+      context: ./php-fpm
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+    container_name: php-fpm
+    volumes:
+      - ${WEB_ROOT}:/usr/local/apache2/htdocs
+      - ${PHP_CONFIG}:/usr/local/etc
+      - ${PHP_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
+      - ${CRONTAB}:/var/spool/cron/crontabs
+    restart: on-failure
     networks:
       backend:
         ipv4_address: 172.20.0.6
@@ -75,68 +75,13 @@ services:
       - redis
       - mysql
       - memcached
-  php-fpm73:
-    build:
-      context: ./php-fpm73
-      args:
-        PHP_73VERSION: ${PHP_73VERSION}
-    container_name: php-fpm73
-    working_dir: /var/www/html/
-    volumes:
-      - ${WEB_ROOT}:/var/www/html/
-      - ${PHP73_CONFIG}:/usr/local/etc/
-      - ${PHP73_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB73}:/var/spool/cron/crontabs/
-    restart: always
-    networks:
-      backend:
-        ipv4_address: 172.20.0.7
-    depends_on:
-      - redis
-      - mysql
-      - memcached
-  php-fpm74:
-    build:
-      context: ./php-fpm74
-      args:
-        PHP_74VERSION: ${PHP_74VERSION}
-    container_name: php-fpm74
-    working_dir: /var/www/html/
-    volumes:
-      - ${WEB_ROOT}:/var/www/html/
-      - ${PHP74_CONFIG}:/usr/local/etc/
-      - ${PHP74_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB74}:/var/spool/cron/crontabs/
-    restart: always
-    networks:
-      backend:
-        ipv4_address: 172.20.0.8
-    depends_on:
-      - redis
-      - mysql
-      - memcached
-  webhook:
-    build:
-      context: ./webhook
-      args:
-        PHP_73VERSION: ${PHP_73VERSION}
-    container_name: webhook
-    working_dir: /var/www/html/
-    volumes:
-      - ${WEB_ROOT}:/var/www/html/
-    restart: always
-    networks:
-      backend:
-        ipv4_address: 172.20.0.9
-    secrets:
-      - host_ssh_key
   memcached:
     image: "memcached:latest"
     container_name: memcached
-    restart: always
+    restart: on-failure
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.7
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
@@ -151,52 +96,85 @@ services:
       - 3306:3306
     volumes:
       - ${MYSQL_DATA}:/var/lib/mysql
-    restart: always
+    restart: on-failure
     networks:
       backend:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.20.0.8
+  mysql8:
+    image: mysql:${MYSQL8_VERSION}
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=${MYSQL_TZ}
+    ports:
+      - 3306:3306
+    volumes:
+      - ${MYSQL8_DATA}:/var/lib/mysql
+    restart: on-failure
+    networks:
+      backend:
+        ipv4_address: 172.20.0.9
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
-    ports:
-      - 1025:1025
-      - 8025:8025
-    restart: always
+    restart: on-failure
     networks:
       backend:
-        ipv4_address: 172.20.0.12
+        ipv4_address: 172.20.0.10
   redis:
     image: redis:latest
     container_name: redis
-    restart: always
+    restart: on-failure
     networks:
       backend:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.20.0.11
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: on-failure
+    networks:
+      backend:
+        ipv4_address: 172.20.0.12
   elasticsearch:
     build:
       context: ./elasticsearch
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: elasticsearch
-    restart: always
+    restart: on-failure
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./elasticsearch/data:/usr/share/elasticsearch/data
-    ports:
-      - 9200:9200
-      - 9300:9300
     environment:
       ES_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
       backend:
+        ipv4_address: 172.20.0.13
+  kibana:
+    build:
+      context: ./kibana
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    container_name: kibana
+    restart: on-failure
+    volumes:
+      - ./kibana/config/:/usr/share/kibana/config:ro
+    networks:
+      backend:
         ipv4_address: 172.20.0.14
+    depends_on:
+      - elasticsearch
   logstash:
     build:
       context: ./logstash
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: logstash
-    restart: always
+    restart: on-failure
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
@@ -207,35 +185,25 @@ services:
         ipv4_address: 172.20.0.15
     depends_on:
       - elasticsearch
-  kibana:
+  logspout:
     build:
-      context: ./kibana
-      args:
-        ELK_VERSION: ${ELK_VERSION}
-    container_name: kibana
-    restart: always
+      context: ./logspout
     volumes:
-      - ./kibana/config/:/usr/share/kibana/config:ro
-    ports:
-      - 5601:5601
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      ROUTE_URIS: logstash://logstash:5000
+      LOGSTASH_TAGS: docker-elk
+    depends_on:
+      - logstash
+    restart: on-failure
     networks:
       backend:
         ipv4_address: 172.20.0.16
-    depends_on:
-      - elasticsearch
 volumes:
   portainer_data:
 networks:
-  frontend:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.10.0.0/16
   backend:
     ipam:
       driver: default
       config:
         - subnet: 172.20.0.0/16
-secrets:
-  host_ssh_key:
-    file: ~/.ssh/id_ed25519
