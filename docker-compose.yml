@@ -186,13 +186,14 @@ services:
     depends_on:
       - elasticsearch
   logspout:
-    image: gliderlabs/logspout:latest
-    container_name: logspout
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    build:
+      context: ./logspout
     environment:
       ROUTE_URIS: logstash://logstash:5000
       LOGSTASH_TAGS: docker-elk
+    container_name: logspout
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - logstash
     restart: on-failure
