@@ -168,38 +168,6 @@ services:
         ipv4_address: 172.20.0.14
     depends_on:
       - elasticsearch
-  logstash:
-    build:
-      context: ./logstash
-      args:
-        ELK_VERSION: ${ELK_VERSION}
-    container_name: logstash
-    restart: on-failure
-    volumes:
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-    environment:
-      LS_JAVA_OPTS: -Xmx256m -Xms256m
-    networks:
-      backend:
-        ipv4_address: 172.20.0.15
-    depends_on:
-      - elasticsearch
-  logspout:
-    build:
-      context: ./logspout
-    environment:
-      ROUTE_URIS: logstash://logstash:5000
-      LOGSTASH_TAGS: docker-elk
-    container_name: logspout
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - logstash
-    restart: on-failure
-    networks:
-      backend:
-        ipv4_address: 172.20.0.16
 volumes:
   portainer_data:
 networks:
