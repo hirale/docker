@@ -5,3 +5,5 @@ nginx/conf/sites-enabled/*.conf
 apache/conf/extra/httpd-vhosts.conf
 .env
 elasticsearch/data/*
+php-fpm/crontabs/*
+!php-fpm/crontabs/.gitkeep 
