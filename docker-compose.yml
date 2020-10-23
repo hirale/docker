@@ -66,7 +66,7 @@ services:
       - ${WEB_ROOT}:/usr/local/apache2/htdocs
       - ${PHP_CONFIG}:/usr/local/etc
       - ${PHP_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB}:/var/spool/cron/crontabs
+      - ${CRONTAB}:/etc/cron.d
     restart: on-failure
     networks:
       backend:
