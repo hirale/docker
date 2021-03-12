@@ -147,8 +147,8 @@ services:
     container_name: elasticsearch
     restart: always
     volumes:
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
+      - ${ELASTICSERACH_CONFIG}:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ${ELASTICSERACH_DATA}:/usr/share/elasticsearch/data
     environment:
       ES_JAVA_OPTS: -Xmx256m -Xms256m
     networks:
@@ -162,12 +162,34 @@ services:
     container_name: kibana
     restart: always
     volumes:
-      - ./kibana/config/:/usr/share/kibana/config:ro
+      - ${KIBANA_CONFIG}:/usr/share/kibana/config:ro
     networks:
       backend:
         ipv4_address: 172.20.0.14
     depends_on:
       - elasticsearch
+  postgresql:
+    image: postgres:10
+    container_name: postgresql
+    networks:
+      backend:
+        ipv4_address: 172.20.0.15
+    environment:
+      - POSTGRES_USER=${POSTGRESQL_USER}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - ${POSTGRESQL}:/var/lib/postgresql:z
+  sonarqube:
+    image: sonarqube:latest
+    container_name: sonarqube
+    networks:
+      backend:
+        ipv4_address: 172.20.0.16
+    depends_on:
+      - postgresql
+    volumes:
+      - ${SONARQUBE}:/opt/sonarqube:z
 volumes:
   portainer_data:
 networks:
