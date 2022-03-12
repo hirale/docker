@@ -168,28 +168,49 @@ services:
         ipv4_address: 172.20.0.14
     depends_on:
       - elasticsearch
-  postgresql:
-    image: postgres:10
-    container_name: postgresql
-    networks:
-      backend:
-        ipv4_address: 172.20.0.15
-    environment:
-      - POSTGRES_USER=${POSTGRESQL_USER}
-      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
-      - POSTGRES_DB=sonarqube
-    volumes:
-      - ${POSTGRESQL}:/var/lib/postgresql:z
-  sonarqube:
-    image: sonarqube:latest
-    container_name: sonarqube
+  swagger:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger
     networks:
       backend:
         ipv4_address: 172.20.0.16
-    depends_on:
-      - postgresql
+    environment:
+      - URLS=${SWAGGER_URLS}
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    user: root
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}   
+      - POSTGRES_DB=${POSTGRES_DB}   
+    ports:
+      - 5432:5432
+    networks:
+      backend:
+        ipv4_address: 172.20.0.17
+    restart: always
     volumes:
-      - ${SONARQUBE}:/opt/sonarqube:z
+        - ./postgres:/var/lib/postgresql/data
+  odoo15:
+    image: odoo:latest
+    container_name: odoo15
+    user: root
+    depends_on:
+      - postgres
+    tty: true
+    environment:
+      - HOST=postgres
+      - USER=${POSTGRES_USER}
+      - PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      backend:
+        ipv4_address: 172.20.0.18
+    volumes:
+      - ./odoo/entrypoint.sh:/entrypoint.sh   
+      - ./odoo/addons:/mnt/extra-addons
+      - ./odoo/etc:/etc/odoo
+    restart: always    
 volumes:
   portainer_data:
 networks:
