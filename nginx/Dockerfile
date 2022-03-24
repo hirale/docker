@@ -2,13 +2,9 @@ FROM debian:stretch-slim
 
 ARG MAKE_J
 ARG NGINX_VERSION
-ARG PAGESPEED_VERSION
-ARG LIBPNG_VERSION
 
 ENV MAKE_J=${MAKE_J} \
-        NGINX_VERSION=${NGINX_VERSION} \
-        LIBPNG_VERSION=${LIBPNG_VERSION} \
-        PAGESPEED_VERSION=${PAGESPEED_VERSION}
+        NGINX_VERSION=${NGINX_VERSION} 
 
 RUN apt-get update -y && \
         apt-get upgrade -y
@@ -45,35 +41,18 @@ RUN apt-get install -y \
         libjpeg62-turbo-dev \
         libcurl4-openssl-dev
 
-# Build libpng
-RUN cd /tmp && \
-        wget -O- ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-${LIBPNG_VERSION}.tar.gz | tar -zx && \
-        cd /tmp/libpng-${LIBPNG_VERSION} && \
-        ./configure --build=$CBUILD --host=$CHOST --prefix=/usr --enable-shared --with-libpng-compat && \
-        make -j${MAKE_J} install V=0
-
-RUN cd /tmp && \
-        curl -O -L https://github.com/pagespeed/ngx_pagespeed/archive/v${PAGESPEED_VERSION}-stable.zip && \
-        unzip v${PAGESPEED_VERSION}-stable.zip
-
-RUN cd /tmp/incubator-pagespeed-ngx-${PAGESPEED_VERSION}-stable/ && \
-        psol_url=https://dl.google.com/dl/page-speed/psol/${PAGESPEED_VERSION}.tar.gz && \
-        [ -e scripts/format_binary_url.sh ] && psol_url=$(scripts/format_binary_url.sh PSOL_BINARY_URL) && \
-        echo "URL: ${psol_url}" && \
-        curl -L ${psol_url} | tar -xz
-
 # Build in additional Nginx modules
 RUN cd /tmp && \
-        git clone git://github.com/vozlt/nginx-module-vts.git && \
+        git clone https://github.com/vozlt/nginx-module-vts.git && \
         git clone https://github.com/openresty/headers-more-nginx-module.git && \
-        git clone git://github.com/yaoweibin/ngx_http_substitutions_filter_module.git && \
+        git clone https://github.com/yaoweibin/ngx_http_substitutions_filter_module.git && \
         git clone --recursive https://github.com/eustas/ngx_brotli.git
 
 # Build Nginx with support for PageSpeed
 RUN cd /tmp && \
-        curl -L http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz | tar -zx && \
+        curl -L https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz | tar -zx && \
         cd /tmp/nginx-${NGINX_VERSION} && \
-        LD_LIBRARY_PATH=/tmp/incubator-pagespeed-ngx-${PAGESPEED_VERSION}/usr/lib:/usr/lib ./configure \
+        ./configure \
         --sbin-path=/usr/sbin \
         --modules-path=/usr/lib/nginx \
         --with-http_ssl_module \
@@ -105,8 +84,7 @@ RUN cd /tmp && \
         --add-module=/tmp/nginx-module-vts \
         --add-module=/tmp/headers-more-nginx-module \
         --add-module=/tmp/ngx_http_substitutions_filter_module \
-        --add-module=/tmp/ngx_brotli \
-        --add-module=/tmp/incubator-pagespeed-ngx-${PAGESPEED_VERSION}-stable && \
+        --add-module=/tmp/ngx_brotli && \
         make install --silent
 
 # Clean-up
@@ -114,12 +92,7 @@ RUN apt-get remove -y git
 RUN rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
         # Forward request and error logs to docker log collector
         ln -sf /dev/stdout /var/log/nginx/access.log && \
-        ln -sf /dev/stderr /var/log/nginx/error.log && \
-        # Make PageSpeed cache writable
-        mkdir -p /var/cache/nginx/pagespeed && \
-        chmod -R o+wr /var/cache/nginx/pagespeed && \
-        mkdir -p /var/log/pagespeed && \
-        chmod -R o+wr /var/log/pagespeed 
+        ln -sf /dev/stderr /var/log/nginx/error.log
 
 EXPOSE 80
 WORKDIR /var/www/html

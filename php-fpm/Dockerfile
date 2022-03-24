@@ -1,7 +1,7 @@
 ARG PHP_VERSION
 
 FROM php:${PHP_VERSION}-fpm
-WORKDIR /usr/local/apache2/htdocs
+WORKDIR /var/www/html/
 
 # bcmath pdo_mysql intl gd zip opcache redis memcached
 RUN apt-get update && apt-get install -y --no-install-recommends \
