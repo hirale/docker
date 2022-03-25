@@ -1,10 +1,9 @@
 FROM debian:stretch-slim
 
-ARG MAKE_J
+
 ARG NGINX_VERSION
 
-ENV MAKE_J=${MAKE_J} \
-        NGINX_VERSION=${NGINX_VERSION} 
+ENV NGINX_VERSION=${NGINX_VERSION} 
 
 RUN apt-get update -y && \
         apt-get upgrade -y

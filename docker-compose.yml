@@ -4,10 +4,7 @@ services:
     build:
       context: ./nginx
       args:
-        MAKE_J: 4
-        NGINX_VERSION: ${NGINX_VERSION}
-        PAGESPEED_VERSION: ${PAGESPEED_VERSION}
-        LIBPNG_VERSION: ${LIBPNG_VERSION}
+          NGINX_VERSION: ${NGINX_VERSION}
     container_name: nginx
     working_dir: /var/www/html
     volumes:
@@ -18,7 +15,7 @@ services:
       - 443:443
     networks:
       backend:
-        ipv4_address: 172.20.0.3
+        ipv4_address: 172.20.0.2
     depends_on:
       - php-fpm
   php-fpm:
@@ -30,12 +27,10 @@ services:
     volumes:
       - ${WEB_ROOT}:/var/www/html/
       - ${PHP_CONFIG}:/usr/local/etc
-      - ${PHP_SUPERVISORD}:/etc/supervisor/conf.d/supervisord.conf
-      - ${CRONTAB}:/etc/cron.d
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.6
+        ipv4_address: 172.20.0.3
     depends_on:
       - mysql
   mysql:
@@ -55,14 +50,33 @@ services:
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.9
+        ipv4_address: 172.20.0.4
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
     restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.5
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.6
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: ofelia
+    restart: always
+    depends_on:
+      - php-fpm
+    volumes:
+      - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
+      - ${OFELIA_CONFIG}:/etc/ofelia/config.ini
+    networks:
+      backend:
+        ipv4_address: 172.20.0.7
 volumes:
   mysql:
 networks:
