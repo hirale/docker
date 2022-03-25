@@ -1,12 +1,10 @@
 FROM debian:stretch-slim
 
-ARG MAKE_J
 ARG NGINX_VERSION
 ARG PAGESPEED_VERSION
 ARG LIBPNG_VERSION
 
-ENV MAKE_J=${MAKE_J} \
-        NGINX_VERSION=${NGINX_VERSION} \
+ENV NGINX_VERSION=${NGINX_VERSION} \
         LIBPNG_VERSION=${LIBPNG_VERSION} \
         PAGESPEED_VERSION=${PAGESPEED_VERSION}
 
@@ -64,14 +62,14 @@ RUN cd /tmp/incubator-pagespeed-ngx-${PAGESPEED_VERSION}-stable/ && \
 
 # Build in additional Nginx modules
 RUN cd /tmp && \
-        git clone git://github.com/vozlt/nginx-module-vts.git && \
+        git clone https://github.com/vozlt/nginx-module-vts.git && \
         git clone https://github.com/openresty/headers-more-nginx-module.git && \
-        git clone git://github.com/yaoweibin/ngx_http_substitutions_filter_module.git && \
+        git clone https://github.com/yaoweibin/ngx_http_substitutions_filter_module.git && \
         git clone --recursive https://github.com/eustas/ngx_brotli.git
 
 # Build Nginx with support for PageSpeed
 RUN cd /tmp && \
-        curl -L http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz | tar -zx && \
+        curl -L https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz | tar -zx && \
         cd /tmp/nginx-${NGINX_VERSION} && \
         LD_LIBRARY_PATH=/tmp/incubator-pagespeed-ngx-${PAGESPEED_VERSION}/usr/lib:/usr/lib ./configure \
         --sbin-path=/usr/sbin \
