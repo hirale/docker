@@ -7,8 +7,6 @@ WORKDIR /usr/local/apache2/htdocs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
-    supervisor \
-    cron \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -39,5 +37,3 @@ COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
 RUN chmod +x /usr/local/bin/mhsendmail
 
 RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
-
-CMD ["/usr/bin/supervisord"]
