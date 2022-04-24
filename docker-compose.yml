@@ -77,17 +77,6 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.7
-  nodejs:
-    image: node:latest
-    container_name: nodejs
-    restart: always
-    depends_on:
-      - php-fpm
-    volumes:
-      - ${WEB_ROOT}:/var/www/html/
-    networks:
-      backend:
-        ipv4_address: 172.20.0.8
 volumes:
   mysql:
 networks:

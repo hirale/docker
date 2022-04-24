@@ -7,6 +7,8 @@ WORKDIR /var/www/html/
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
+    nodejs \
+    npm \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
