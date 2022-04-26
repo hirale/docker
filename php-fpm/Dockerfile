@@ -7,7 +7,6 @@ WORKDIR /var/www/html/
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
-    nodejs \
     npm \
     openssh-client \
     libfreetype6-dev \
@@ -21,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libxslt-dev \
     libsodium-dev \
+    && npm install -g yarn \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
