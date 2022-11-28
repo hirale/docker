@@ -6,7 +6,7 @@ services:
       - ${DOCKER_SOCKET}:/var/run/docker.sock
       - portainer_data:/data
     container_name: portainer
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.2
@@ -20,7 +20,7 @@ services:
     container_name: nginx
     volumes:
       - ${NGINX_CONFIG}:/etc/nginx
-    restart: always
+    restart: unless-stopped
     ports:
       - 443:443
     networks:
@@ -33,7 +33,7 @@ services:
     container_name: varnish
     volumes:
       - ${VARNISH_CONFIG}:/etc/varnish
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.4
@@ -43,7 +43,7 @@ services:
     image: httpd:latest
     build:
       context: ./apache
-      args: 
+      args:
         APACHE_VERSION: ${APACHE_VERSION}
     container_name: apache
     volumes:
@@ -52,7 +52,7 @@ services:
     networks:
       backend:
         ipv4_address: 172.20.0.5
-    restart: always
+    restart: unless-stopped
     depends_on:
       - php-fpm
   php-fpm:
@@ -64,7 +64,7 @@ services:
     volumes:
       - ${WEB_ROOT}:/usr/local/apache2/htdocs
       - ${PHP_CONFIG}:/usr/local/etc
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.6
@@ -75,7 +75,7 @@ services:
   memcached:
     image: "memcached:latest"
     container_name: memcached
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.7
@@ -93,7 +93,7 @@ services:
       - 3306:3306
     volumes:
       - ${MYSQL_DATA}:/var/lib/mysql
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.8
@@ -111,28 +111,28 @@ services:
       - 3308:3306
     volumes:
       - ${MYSQL8_DATA}:/var/lib/mysql
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.9
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.10
   redis:
     image: redis:latest
     container_name: redis
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.11
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq
-    restart: always
+    restart: unless-stopped
     networks:
       backend:
         ipv4_address: 172.20.0.12
@@ -142,84 +142,43 @@ services:
       args:
         ELK_VERSION: ${ELK_VERSION}
     container_name: elasticsearch
-    restart: always
+    restart: unless-stopped
     volumes:
       - ${ELASTICSERACH_CONFIG}:/usr/share/elasticsearch/config/elasticsearch.yml
       - ${ELASTICSERACH_DATA}:/usr/share/elasticsearch/data
     environment:
-      ES_JAVA_OPTS: -Xmx256m -Xms256m
+      ES_JAVA_OPTS: -Xmx512m -Xms512m
     networks:
       backend:
         ipv4_address: 172.20.0.13
-  kibana:
-    build:
-      context: ./kibana
-      args:
-        ELK_VERSION: ${ELK_VERSION}
-    container_name: kibana
-    restart: always
-    volumes:
-      - ${KIBANA_CONFIG}:/usr/share/kibana/config:ro
-    networks:
-      backend:
-        ipv4_address: 172.20.0.14
-    depends_on:
-      - elasticsearch
-  swagger:
-    image: swaggerapi/swagger-ui:latest
-    container_name: swagger
-    networks:
-      backend:
-        ipv4_address: 172.20.0.16
-    environment:
-      - URLS=${SWAGGER_URLS}
-  postgres:
-    image: postgres:latest
-    container_name: postgres
-    user: root
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}   
-      - POSTGRES_DB=${POSTGRES_DB}   
-    ports:
-      - 5432:5432
-    networks:
-      backend:
-        ipv4_address: 172.20.0.17
-    restart: always
-    volumes:
-        - ./postgres:/var/lib/postgresql/data
-  odoo15:
-    image: odoo:latest
-    container_name: odoo15
-    user: root
-    depends_on:
-      - postgres
-    tty: true
-    environment:
-      - HOST=postgres
-      - USER=${POSTGRES_USER}
-      - PASSWORD=${POSTGRES_PASSWORD}
-    networks:
-      backend:
-        ipv4_address: 172.20.0.18
-    volumes:
-      - ./odoo/entrypoint.sh:/entrypoint.sh   
-      - ./odoo/addons:/mnt/extra-addons
-      - ./odoo/etc:/etc/odoo
-    restart: always    
   ofelia:
     image: mcuadros/ofelia:latest
     container_name: ofelia
-    restart: always
+    restart: unless-stopped
     depends_on:
       - php-fpm
     volumes:
       - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
-      - ${OFELIA_CONFIG}:/etc/ofelia/config.ini
+      - ${OFELIA_CONFIG}:/etc/ofelia/config.ini:ro
     networks:
       backend:
-        ipv4_address: 172.20.0.7
+        ipv4_address: 172.20.0.14
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Rome
+      - PASSWORD=${VSC_PASSWORD}
+      - DEFAULT_WORKSPACE=/home/applications
+    volumes:
+      - /vsc:/config
+      - ${WEB_ROOT}:/home/applications
+    restart: unless-stopped
+    networks:
+      backend:
+        ipv4_address: 172.20.0.15
 volumes:
   portainer_data:
 networks:
