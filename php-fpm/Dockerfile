@@ -1,12 +1,13 @@
 ARG PHP_VERSION
 
 FROM php:${PHP_VERSION}-fpm
-WORKDIR /usr/local/apache2/htdocs
+WORKDIR /var/www/html/
 
 # bcmath pdo_mysql intl gd zip opcache redis memcached
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
+    npm \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -19,12 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libxslt-dev \
     libsodium-dev \
+    && npm install -g yarn \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets \
+    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets \
     && pecl install redis memcached xdebug \
-    && docker-php-ext-enable redis memcached \
+    && docker-php-ext-enable redis memcached exif \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
 

@@ -1,60 +1,49 @@
 version: "3.8"
 services:
-  portainer:
-    image: portainer/portainer-ce
-    volumes:
-      - ${DOCKER_SOCKET}:/var/run/docker.sock
-      - portainer_data:/data
-    container_name: portainer
-    restart: unless-stopped
-    networks:
-      backend:
-        ipv4_address: 172.20.0.2
   nginx:
     build:
       context: ./nginx
       args:
         NGINX_VERSION: ${NGINX_VERSION}
-        PAGESPEED_VERSION: ${PAGESPEED_VERSION}
-        LIBPNG_VERSION: ${LIBPNG_VERSION}
     container_name: nginx
+    working_dir: /var/www/html
     volumes:
+      - ${WEB_ROOT}:/var/www/html
       - ${NGINX_CONFIG}:/etc/nginx
     restart: unless-stopped
     ports:
       - 443:443
     networks:
       backend:
-        ipv4_address: 172.20.0.3
-    depends_on:
-      - varnish
-  varnish:
-    image: varnish:latest
-    container_name: varnish
-    volumes:
-      - ${VARNISH_CONFIG}:/etc/varnish
-    restart: unless-stopped
-    networks:
-      backend:
-        ipv4_address: 172.20.0.4
-    depends_on:
-      - apache
-  apache:
-    image: httpd:latest
-    build:
-      context: ./apache
-      args:
-        APACHE_VERSION: ${APACHE_VERSION}
-    container_name: apache
-    volumes:
-      - ${WEB_ROOT}:/usr/local/apache2/htdocs
-      - ${APACHE_CONFIG}:/usr/local/apache2/conf
-    networks:
-      backend:
-        ipv4_address: 172.20.0.5
-    restart: unless-stopped
+        ipv4_address: 172.20.0.2
     depends_on:
       - php-fpm
+  pagespeed:
+    image: pagespeed/nginx-pagespeed
+    container_name: pagespeed
+    working_dir: /var/www/html
+    volumes:
+      - ./pagespeed/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${WEB_ROOT}:/var/www/html
+    networks:
+      backend:
+        ipv4_address: 172.20.0.12
+    restart: unless-stopped
+  php7-fpm:
+    build:
+      context: ./php7-fpm
+      args:
+        PHP_VERSION: ${PHP7_VERSION}
+    container_name: php7-fpm
+    volumes:
+      - ${WEB_ROOT}:/var/www/html/
+      - ${PHP7_CONFIG}:/usr/local/etc
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.3
+    depends_on:
+      - mysql
   php-fpm:
     build:
       context: ./php-fpm
@@ -62,23 +51,29 @@ services:
         PHP_VERSION: ${PHP_VERSION}
     container_name: php-fpm
     volumes:
-      - ${WEB_ROOT}:/usr/local/apache2/htdocs
+      - ${WEB_ROOT}:/var/www/html/
       - ${PHP_CONFIG}:/usr/local/etc
-    restart: unless-stopped
+    restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.6
+        ipv4_address: 172.20.0.8
     depends_on:
-      - redis
       - mysql
-      - memcached
-  memcached:
-    image: "memcached:latest"
-    container_name: memcached
-    restart: unless-stopped
+  php82-fpm:
+    build:
+      context: ./php82-fpm
+      args:
+        PHP_VERSION: ${PHP82_VERSION}
+    container_name: php82-fpm
+    volumes:
+      - ${WEB_ROOT}:/var/www/html/
+      - ${PHP82_CONFIG}:/usr/local/etc
+    restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.7
+        ipv4_address: 172.20.0.9
+    depends_on:
+      - mysql
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
@@ -92,95 +87,63 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - ${MYSQL_DATA}:/var/lib/mysql
-    restart: unless-stopped
+      - mysql:/var/lib/mysql
+    restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.8
-  mysql8:
-    image: mysql:${MYSQL8_VERSION}
-    container_name: mysql8
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_ROOT_HOST=%
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - TZ=${MYSQL_TZ}
-    ports:
-      - 3308:3306
-    volumes:
-      - ${MYSQL8_DATA}:/var/lib/mysql
-    restart: unless-stopped
-    networks:
-      backend:
-        ipv4_address: 172.20.0.9
+        ipv4_address: 172.20.0.4
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
-    restart: unless-stopped
+    restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.20.0.5
   redis:
     image: redis:latest
     container_name: redis
-    restart: unless-stopped
+    restart: always
     networks:
       backend:
-        ipv4_address: 172.20.0.11
-  rabbitmq:
-    image: rabbitmq:management
-    container_name: rabbitmq
-    restart: unless-stopped
-    networks:
-      backend:
-        ipv4_address: 172.20.0.12
-  elasticsearch:
-    build:
-      context: ./elasticsearch
-      args:
-        ELK_VERSION: ${ELK_VERSION}
-    container_name: elasticsearch
-    restart: unless-stopped
-    volumes:
-      - ${ELASTICSERACH_CONFIG}:/usr/share/elasticsearch/config/elasticsearch.yml
-      - ${ELASTICSERACH_DATA}:/usr/share/elasticsearch/data
-    environment:
-      ES_JAVA_OPTS: -Xmx512m -Xms512m
-    networks:
-      backend:
-        ipv4_address: 172.20.0.13
+        ipv4_address: 172.20.0.6
   ofelia:
     image: mcuadros/ofelia:latest
     container_name: ofelia
-    restart: unless-stopped
+    restart: always
     depends_on:
       - php-fpm
     volumes:
       - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
-      - ${OFELIA_CONFIG}:/etc/ofelia/config.ini:ro
+      - ${OFELIA_CONFIG}:/etc/ofelia/config.ini
     networks:
       backend:
-        ipv4_address: 172.20.0.14
-  code-server:
-    image: lscr.io/linuxserver/code-server:latest
-    container_name: code-server
+        ipv4_address: 172.20.0.7
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+    container_name: elasticsearch
+    ports:
+      - 9200:9200
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Rome
-      - PASSWORD=${VSC_PASSWORD}
-      - DEFAULT_WORKSPACE=/home/applications
-    volumes:
-      - /vsc:/config
-      - ${WEB_ROOT}:/home/applications
-    restart: unless-stopped
+      - discovery.type=single-node
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
     networks:
       backend:
-        ipv4_address: 172.20.0.15
+        ipv4_address: 172.20.0.10
+  varnish:
+    build:
+      context: ./varnish
+    container_name: varnish
+    volumes:
+      - ./varnish/default.vcl:/etc/varnish/default.vcl
+    networks:
+      backend:
+        ipv4_address: 172.20.0.11
 volumes:
-  portainer_data:
+  mysql:
 networks:
   backend:
     ipam:
