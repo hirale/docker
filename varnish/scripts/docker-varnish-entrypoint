@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+# this will check if the first argument is a flag
+# but only works if all arguments require a hyphenated flag
+# -v; -SL; -f arg; etc will work, but not arg1 arg2
+if [ "$#" -eq 0 ] || [ "${1#-}" != "$1" ]; then
+    set -- varnishd \
+    -F \
+    -f /etc/varnish/default.vcl \
+    -a :6081 \
+    -T 0.0.0.0:6082 \
+    -S none \
+    -p vcc_allow_inline_c=true \
+    -p feature=+esi_ignore_other_elements \
+    -s malloc,256m
+    "$@"
+fi
+
+exec "$@"
