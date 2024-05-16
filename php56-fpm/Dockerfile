@@ -3,15 +3,19 @@ ARG PHP_VERSION
 FROM php:${PHP_VERSION}-fpm
 WORKDIR /var/www/html/
 
+RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list \
+    && sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list \
+    && sed -i '/stretch-updates/d' /etc/apt/sources.list
+
 # bcmath pdo_mysql intl gd zip opcache redis memcached
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
-    npm \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
+    libwebp-dev \
     libxml2-dev \
     libmemcached-dev \
     unzip \
@@ -20,13 +24,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libxslt-dev \
     libsodium-dev \
-    && npm install -g yarn \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    libmcrypt-dev
+
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets \
-    && pecl install redis memcached xdebug \
-    && docker-php-ext-enable redis memcached exif \
+    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sockets \
+    && pecl channel-update pecl.php.net \
+    && pecl install xdebug-2.5.5 mcrypt \
+    && docker-php-ext-install mcrypt \
+    && docker-php-ext-enable xdebug exif mcrypt \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
 
