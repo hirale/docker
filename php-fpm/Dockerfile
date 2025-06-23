@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp-dev \
     libxml2-dev \
     libmemcached-dev \
+    libftp-dev\
     unzip \
     zip \
     libzip-dev \
@@ -26,7 +27,7 @@ RUN npm install -g yarn \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets \
+    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets ftp \
     && pecl install redis memcached xdebug \
     && docker-php-ext-enable redis memcached exif \
     && apt-get clean \

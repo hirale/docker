@@ -8,7 +8,7 @@ RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list \
     && sed -i '/stretch-updates/d' /etc/apt/sources.list
 
 # bcmath pdo_mysql intl gd zip opcache redis memcached
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update --allow-unauthenticated && apt-get install --allow-unauthenticated -y --no-install-recommends \
     wget \
     git \
     openssh-client \
@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp-dev \
     libxml2-dev \
     libmemcached-dev \
+    libftp-dev \
     unzip \
     zip \
     libzip-dev \
