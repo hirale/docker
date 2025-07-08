@@ -43,23 +43,31 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - mysql
-  php56-fpm:
-    build:
-      context: ./php56-fpm
-      args:
-        PHP_VERSION: 5.6
-    container_name: php56-fpm
+  node:
+    image: node:lts-slim
+    container_name: node
+    working_dir: /var/www/html/
     volumes:
       - ${WEB_ROOT}:/var/www/html/
-      - ./php56-fpm/conf:/usr/local/etc
-    restart: unless-stopped
-    networks:
-      backend:
-        ipv4_address: 172.20.0.7
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - mysql
+    command: bash
+    tty: true
+  # php56-fpm:
+  #   build:
+  #     context: ./php56-fpm
+  #     args:
+  #       PHP_VERSION: 5.6
+  #   container_name: php56-fpm
+  #   volumes:
+  #     - ${WEB_ROOT}:/var/www/html/
+  #     - ./php56-fpm/conf:/usr/local/etc
+  #   restart: unless-stopped
+  #   networks:
+  #     backend:
+  #       ipv4_address: 172.20.0.7
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   depends_on:
+  #     - mysql
   mysql:
     image: mariadb:${MARIADB_VERSION}
     container_name: mysql
