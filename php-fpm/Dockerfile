@@ -15,13 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp-dev \
     libxml2-dev \
     libmemcached-dev \
-    libftp-dev\
-    unzip \
-    zip \
     libzip-dev \
     zlib1g-dev \
     libxslt-dev \
-    libsodium-dev
+    libsodium-dev \
+    libicu-dev \
+    unzip \
+    zip \
+    libftp-dev
 
 RUN npm install -g yarn \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
