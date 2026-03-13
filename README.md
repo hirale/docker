@@ -1,134 +1,201 @@
-# Docker LNMP
+# Docker LNMP (Local PHP Dev Environment)
 
-Local development environment: **Nginx → PHP-FPM → MariaDB**, with Redis, Mailpit, and Ofelia (cron).
+A practical local stack for PHP projects:
 
-## Stack
+- Nginx (TLS reverse proxy)
+- PHP-FPM (default 8.4, optional 8.5 and 7.4)
+- MariaDB
+- Redis
+- Mailpit (SMTP + inbox UI via Nginx)
+- Ofelia (container cron)
 
-| Service | Default | Notes |
-|---------|---------|-------|
-| Nginx | 1.27.x | Reverse proxy, SSL termination |
-| PHP-FPM | 8.4 | Multi-version support via Compose override files (7.4/8.4/8.5) |
-| MariaDB | 10.11 | With healthcheck |
-| Redis | `${REDIS_VERSION}` | Session/cache store |
-| Mailpit | `${MAILPIT_VERSION_IMAGE}` | Local mail testing, proxied through Nginx (no direct host port) |
-| Ofelia | `${OFELIA_VERSION}` | Docker-native cron scheduler |
+This repository is optimized for local development with fixed container names and predictable versioning.
 
-## Getting Started
+## Architecture
 
-### 1. Configure environment
+- Nginx proxies app traffic to PHP-FPM on the internal Docker network.
+- MariaDB is exposed to host on `3306`.
+- HTTPS is exposed on `443`.
+- Mailpit is **not** directly exposed to host; access it through an Nginx vhost (for example: `mail.domain.com.conf.sample`).
+
+## Prerequisites
+
+- Docker Engine + Docker Compose plugin
+- Local DNS/hosts entries for your dev domains
+- TLS cert/key files if your vhost requires SSL
+
+## Quick Start
+
+1. Copy environment file.
 
 ```bash
 cp .env.sample .env
-# Edit .env — set WEB_ROOT to your projects directory
 ```
 
-### 2. Configure Nginx sites
+2. Edit `.env` and set at least:
+
+- `WEB_ROOT` (your local projects root)
+- MariaDB credentials (`MARIADB_*`)
+
+3. Create and enable an Nginx site config.
 
 ```bash
-# Create a new site from template
 ./nginx/scripts/sitectl.sh new your-site.conf
-
-# Edit nginx/conf/sites-available/your-site.conf
-# Then enable it
+# edit nginx/conf/sites-available/your-site.conf
 ./nginx/scripts/sitectl.sh enable your-site.conf
 ```
 
-### 3. Set up SSL (optional)
+4. Add SSL files if needed.
 
 ```bash
 mkdir -p nginx/conf/ssl
-# Place your .crt and .key files in nginx/conf/ssl/
+# put *.crt and *.key in nginx/conf/ssl/
 ```
 
-### 4. Start the stack
+5. Start the default stack.
 
 ```bash
 docker compose up -d
 ```
 
-Default exposed host ports:
-- `443` for Nginx
-- `3306` for MariaDB
+## Exposed Ports
 
-### Mailpit Sendmail (PHP `mail()` support)
+- `443` -> Nginx
+- `3306` -> MariaDB
 
-This stack uses Mailpit's native sendmail command inside PHP containers:
+Everything else stays internal by default.
+
+## Multi-PHP Usage
+
+Default PHP is from `docker-compose.yml` (`PHP_VERSION`, default `8.4.8`).
+
+Start extra PHP versions with override files:
+
+```bash
+# add PHP 8.5
+docker compose -f docker-compose.yml -f docker-compose.php85.yml up -d
+
+# add PHP 7.4
+docker compose -f docker-compose.yml -f docker-compose.php74.yml up -d
+
+# run all (8.4 + 8.5 + 7.4)
+docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compose.php74.yml up -d
+```
+
+Select PHP per site using Nginx snippet include:
+
+```nginx
+# PHP 8.4
+include snippets/php-upstream-84.conf;
+
+# PHP 8.5
+include snippets/php-upstream-85.conf;
+
+# PHP 7.4
+include snippets/php-upstream-74.conf;
+```
+
+## Mailpit Integration
+
+PHP uses Mailpit sendmail bridge:
 
 ```ini
 sendmail_path = "/usr/local/bin/mailpit sendmail --smtp-addr=mailpit:1025"
 ```
 
-`MAILPIT_BINARY_VERSION` is pinned in `.env`/`.env.sample` for reproducible PHP image builds.
-To upgrade: bump `MAILPIT_BINARY_VERSION`, then rebuild PHP images:
+Mailpit service is internal only. To view inbox, proxy `mailpit:8025` through an Nginx vhost.
 
-```bash
-docker compose build php-fpm
-docker compose -f docker-compose.yml -f docker-compose.php85.yml build php85-fpm
-docker compose -f docker-compose.yml -f docker-compose.php74.yml build php74-fpm
-```
+## Environment Variables (Important)
 
-Service image tags are also pinned in `.env`:
+### Core runtime
+
+- `PHP_VERSION`
+- `MARIADB_VERSION`
+- `NGINX_VERSION`
+- `WEB_ROOT`
+- `NGINX_CONFIG`
+- `PHP_CONFIG`
+
+### MariaDB (clarified naming)
+
+- `MARIADB_DATABASE`
+- `MARIADB_USER`
+- `MARIADB_PASSWORD`
+- `MARIADB_ROOT_PASSWORD`
+- `MARIADB_TZ`
+- `MARIADB_DATA_DIR`
+
+### Pinned image versions
+
 - `MAILPIT_VERSION_IMAGE`
 - `REDIS_VERSION`
 - `OFELIA_VERSION`
 
-MariaDB env keys use the `MARIADB_*` prefix for clarity:
-- `MARIADB_DATABASE`, `MARIADB_USER`, `MARIADB_PASSWORD`
-- `MARIADB_ROOT_PASSWORD`, `MARIADB_TZ`, `MARIADB_DATA_DIR`
+### Build-time Mailpit binary version (inside PHP image)
 
-### Multi-PHP Version Support
+- `MAILPIT_BINARY_VERSION`
 
-The default stack runs PHP 8.4 from `docker-compose.yml` (`PHP_VERSION=8.4.8`).
-Start additional PHP versions with override files:
+### Ofelia
 
-```bash
-# Start PHP 8.5 alongside default
-docker compose -f docker-compose.yml -f docker-compose.php85.yml up -d
+- `DOCKER_SOCKET`
+- `OFELIA_CONFIG`
 
-# Start PHP 7.4 alongside default
-docker compose -f docker-compose.yml -f docker-compose.php74.yml up -d
-
-# Start everything
-docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compose.php74.yml up -d
-```
-
-Then point your Nginx site config to the desired PHP-FPM upstream:
-
-```nginx
-# Default PHP 8.4
-include sites-conf/php-upstream-84.conf;
-
-# PHP 8.5
-include sites-conf/php-upstream-85.conf;
-
-# PHP 7.4
-include sites-conf/php-upstream-74.conf;
-```
-
-### Mailpit UI via Nginx
-
-Mailpit is not exposed directly on the host.
-Use an Nginx vhost (for example `nginx/conf/sites-enabled/mail.domain.com.conf.sample`) that proxies to `mailpit:8025`.
-
-### Useful Commands
+## Daily Commands
 
 ```bash
-# Enter PHP container as www-data
-docker exec -it -u www-data php-fpm /bin/bash
+# start / stop
+docker compose up -d
+docker compose down
 
-# View logs
+# logs
+docker compose logs -f nginx
 docker compose logs -f php-fpm
 
-# Rebuild PHP after Dockerfile changes
-docker compose build php-fpm
+# shell into php container
+docker exec -it -u www-data php-fpm /bin/bash
 
-# Validate merged compose
-docker compose -f docker-compose.yml -f docker-compose.php85.yml config
+# validate compose (base)
+docker compose -f docker-compose.yml config
 
-# Clean container logs
-./clean_logs.sh
+# validate compose (with extra php versions)
+docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compose.php74.yml config
 ```
+
+## Nginx Site Management Helper
+
+```bash
+./nginx/scripts/sitectl.sh list
+./nginx/scripts/sitectl.sh new mysite.conf
+./nginx/scripts/sitectl.sh enable mysite.conf
+./nginx/scripts/sitectl.sh disable mysite.conf
+```
+
+## Healthchecks
+
+Core services include healthchecks in Compose:
+
+- `nginx`
+- `php-fpm` (and php74/php85 when enabled)
+- `mysql`
+- `redis`
+- `mailpit`
+
+This improves startup ordering and visibility via `docker compose ps`.
+
+## Troubleshooting
+
+- **Nginx 502/Bad Gateway**
+  - Check `php-fpm` container is healthy: `docker compose ps`
+  - Check vhost uses correct upstream snippet (`84/85/74`).
+
+- **DB connection failed**
+  - Confirm `.env` credentials and `MARIADB_DATABASE` match app config.
+  - Confirm `mysql` is healthy and port `3306` is free on host.
+
+- **Mail not visible**
+  - Confirm app uses PHP `mail()` or SMTP to `mailpit:1025`.
+  - Confirm Mailpit vhost proxies to `mailpit:8025`.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE).

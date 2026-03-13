@@ -14,9 +14,9 @@ server {
     ssl_certificate_key /etc/nginx/ssl/example.local.key;
 
     location ~ \.php$ {
-        include sites-conf/php.conf;
-        include sites-conf/php-upstream-84.conf;
-        fastcgi_param PHP_ADMIN_VALUE "open_basedir=$base/:/usr/lib/php/:/tmp/:/var/www/";
+        include snippets/php.conf;
+        include snippets/php-upstream-84.conf;
+        fastcgi_param PHP_ADMIN_VALUE "open_basedir=$base/:/usr/lib/php/:/tmp/:/var/www/html";
     }
 
     location / {
