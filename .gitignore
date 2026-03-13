@@ -1,4 +1,5 @@
 mysql/
 nginx/conf/ssl/
 nginx/conf/sites-enabled/*.conf
+nginx/conf/sites-available/*.conf
 .env

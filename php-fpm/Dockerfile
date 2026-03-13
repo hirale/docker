@@ -1,5 +1,5 @@
 ARG PHP_VERSION
-ARG MAILPIT_BINARY_VERSION=1.29.3
+ARG MAILPIT_BINARY_VERSION
 
 FROM php:${PHP_VERSION}-fpm
 WORKDIR /var/www/html/
@@ -49,7 +49,7 @@ RUN set -eux; \
         *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
     esac; \
     MAILPIT_TARBALL="mailpit-linux-${MAILPIT_ARCH}.tar.gz"; \
-    MAILPIT_URL="https://github.com/axllent/mailpit/releases/download/v${MAILPIT_BINARY_VERSION}/${MAILPIT_TARBALL}"; \
+    MAILPIT_URL="https://github.com/axllent/mailpit/releases/download/v${MAILPIT_BINARY_VERSION:-1.29.3}/${MAILPIT_TARBALL}"; \
     wget -qO /tmp/mailpit.tar.gz "${MAILPIT_URL}"; \
     echo "${MAILPIT_SHA256}  /tmp/mailpit.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/mailpit.tar.gz -C /tmp mailpit; \
