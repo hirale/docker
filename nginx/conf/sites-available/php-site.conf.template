@@ -10,8 +10,8 @@ server {
     access_log /dev/stdout;
     error_log /dev/stdout info;
 
-    ssl_certificate /etc/nginx/ssl/example.local.crt;
-    ssl_certificate_key /etc/nginx/ssl/example.local.key;
+    ssl_certificate /etc/nginx/certs/example.local.crt;
+    ssl_certificate_key /etc/nginx/certs/example.local.key;
 
     location ~ \.php$ {
         include snippets/php.conf;

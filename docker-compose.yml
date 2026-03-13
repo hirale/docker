@@ -30,6 +30,8 @@ services:
         PHP_VERSION: ${PHP_VERSION:-8.4.8}
         MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
     container_name: php-fpm
+    user: "www-data"
+    working_dir: /var/www/html
     volumes:
       - ${WEB_ROOT}:/var/www/html/
       - ${PHP_CONFIG}:/usr/local/etc

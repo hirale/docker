@@ -40,16 +40,16 @@ cp .env.sample .env
 3. Create and enable an Nginx site config.
 
 ```bash
-./nginx/scripts/sitectl.sh new your-site.conf
+./sitectl.sh new your-site.conf
 # edit nginx/conf/sites-available/your-site.conf
-./nginx/scripts/sitectl.sh enable your-site.conf
+./sitectl.sh enable your-site.conf
 ```
 
 4. Add SSL files if needed.
 
 ```bash
-mkdir -p nginx/conf/ssl
-# put *.crt and *.key in nginx/conf/ssl/
+mkdir -p nginx/conf/certs
+# put *.crt and *.key in nginx/conf/certs/
 ```
 
 5. Start the default stack.
@@ -125,6 +125,12 @@ Mailpit service is internal only. To view inbox, proxy `mailpit:8025` through an
 - `MARIADB_TZ`
 - `MARIADB_DATA_DIR`
 
+### DB helper script (`db.sh`) optional
+
+- `DB_TOOL_USER` (admin user used by `db.sh`, default `root`)
+- `DB_TOOL_PASSWORD` (admin password used by `db.sh`, default falls back to `MARIADB_ROOT_PASSWORD`)
+- `DB_DEFAULT_USER_PASSWORD` (default app-user password when auto-creating DB users, fallback is same as db user name)
+
 ### Pinned image versions
 
 - `MAILPIT_VERSION_IMAGE`
@@ -152,7 +158,23 @@ docker compose logs -f nginx
 docker compose logs -f php-fpm
 
 # shell into php container
-docker exec -it -u www-data php-fpm /bin/bash
+docker exec -it php-fpm /bin/bash
+
+# list non-system databases
+./db.sh list
+
+# db export (required db name)
+./db.sh export my_project_db
+# or custom output path
+./db.sh export my_project_db ./sql/my_project_db.sql.gz
+
+# ensure db + same-name user (with privileges on that db)
+./db.sh ensure my_project_db
+
+# db import (.sql or .sql.gz) into target db
+./db.sh import ./sql/my_project_db.sql.gz my_project_db
+# import with explicit app user/password (also creates/grants before import)
+./db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
 
 # validate compose (base)
 docker compose -f docker-compose.yml config
@@ -164,10 +186,10 @@ docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compo
 ## Nginx Site Management Helper
 
 ```bash
-./nginx/scripts/sitectl.sh list
-./nginx/scripts/sitectl.sh new mysite.conf
-./nginx/scripts/sitectl.sh enable mysite.conf
-./nginx/scripts/sitectl.sh disable mysite.conf
+./sitectl.sh list
+./sitectl.sh new mysite.conf
+./sitectl.sh enable mysite.conf
+./sitectl.sh disable mysite.conf
 ```
 
 ## Healthchecks

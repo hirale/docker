@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-AVAILABLE_DIR="${ROOT_DIR}/conf/sites-available"
-ENABLED_DIR="${ROOT_DIR}/conf/sites-enabled"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AVAILABLE_DIR="${ROOT_DIR}/nginx/conf/sites-available"
+ENABLED_DIR="${ROOT_DIR}/nginx/conf/sites-enabled"
 TEMPLATE_FILE="${AVAILABLE_DIR}/php-site.conf.template"
 
 usage() {
   cat <<'EOF'
 Usage:
-  nginx/scripts/sitectl.sh list
-  nginx/scripts/sitectl.sh new <site.conf>
-  nginx/scripts/sitectl.sh enable <site.conf>
-  nginx/scripts/sitectl.sh disable <site.conf>
+  ./sitectl.sh list
+  ./sitectl.sh new <site.conf>
+  ./sitectl.sh enable <site.conf>
+  ./sitectl.sh disable <site.conf>
 
 Notes:
   - "new" copies php-site.conf.template into sites-available.
