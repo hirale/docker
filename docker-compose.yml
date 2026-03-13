@@ -50,6 +50,7 @@ services:
     volumes:
       - ${WEB_ROOT}:/var/www/html/
     command: bash
+    restart: unless-stopped
     tty: true
   # php56-fpm:
   #   build:
