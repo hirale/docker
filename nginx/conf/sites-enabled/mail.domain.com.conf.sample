@@ -13,7 +13,7 @@ server {
 
 	# reverse proxy
 	location / {
-		proxy_pass http://mailhog:8025;
+		proxy_pass http://mailpit:8025;
 		include sites-conf/proxy.conf;
 	}
 }

@@ -1,0 +1,25 @@
+services:
+  php85-fpm:
+    build:
+      context: ./php-fpm
+      args:
+        PHP_VERSION: "8.5"
+        MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
+    container_name: php85-fpm
+    volumes:
+      - ${WEB_ROOT}:/var/www/html/
+      - ${PHP_CONFIG}:/usr/local/etc
+    restart: unless-stopped
+    networks:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

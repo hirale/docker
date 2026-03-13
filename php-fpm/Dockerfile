@@ -1,20 +1,19 @@
 ARG PHP_VERSION
+ARG MAILPIT_BINARY_VERSION=1.29.3
 
 FROM php:${PHP_VERSION}-fpm
 WORKDIR /var/www/html/
 
-# bcmath pdo_mysql intl gd zip opcache redis memcached
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
-    npm \
     openssh-client \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
     libwebp-dev \
     libxml2-dev \
-    libmemcached-dev \
     libzip-dev \
     zlib1g-dev \
     libxslt-dev \
@@ -22,24 +21,39 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     unzip \
     zip \
-    libftp-dev
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g yarn \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+# PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets ftp \
-    && pecl install redis memcached xdebug \
-    && docker-php-ext-enable redis memcached exif \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/*
+    && docker-php-ext-install -j$(nproc) \
+        gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets
+
+# PECL extensions
+RUN pecl install redis xdebug \
+    && docker-php-ext-enable redis exif \
+    && rm -rf /tmp/pear
 
 # Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 RUN mkdir -p /var/run/php
-# Mailhog
-COPY mhsendmail_linux_amd64 /usr/local/bin/mhsendmail
-RUN chmod +x /usr/local/bin/mhsendmail
+
+ARG TARGETARCH
+# Install Mailpit binary for sendmail support (`mailpit sendmail`) with checksum verification.
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        amd64) MAILPIT_ARCH="amd64"; MAILPIT_SHA256="92a51cdc54dc785a2cae2afd1822c3d30f477e6e00a3a6529344bdd8da878574" ;; \
+        arm64) MAILPIT_ARCH="arm64"; MAILPIT_SHA256="d42cb7cd92a692c24da879e15f4146b94546985e5cc5336549724e96ad197d0d" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    MAILPIT_TARBALL="mailpit-linux-${MAILPIT_ARCH}.tar.gz"; \
+    MAILPIT_URL="https://github.com/axllent/mailpit/releases/download/v${MAILPIT_BINARY_VERSION}/${MAILPIT_TARBALL}"; \
+    wget -qO /tmp/mailpit.tar.gz "${MAILPIT_URL}"; \
+    echo "${MAILPIT_SHA256}  /tmp/mailpit.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/mailpit.tar.gz -C /tmp mailpit; \
+    install -m 0755 /tmp/mailpit /usr/local/bin/mailpit; \
+    rm -f /tmp/mailpit /tmp/mailpit.tar.gz
 
 RUN usermod -u 1000 www-data && groupmod -g 1000 www-data

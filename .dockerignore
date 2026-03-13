@@ -1,3 +1,2 @@
-./mysql/*
-./nginx/sites-enable
-./nginx/ssl
+mysql/
+nginx/conf/ssl/
