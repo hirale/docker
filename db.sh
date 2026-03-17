@@ -12,7 +12,7 @@ Usage:
   ./db.sh export <database> [output.sql.gz]
   ./db.sh ensure <database> [db_user] [db_password]
   ./db.sh import <dump.sql|dump.sql.gz> <database> [db_user] [db_password]
-  ./db.sh copy <source_db> <target_db> [source_user] [target_user] [target_password]
+  ./db.sh copy <source_db> <target_db> [source_user] [target_user] [target_password] [--replace-target] [--ignore-table table]
 
 Examples:
   ./db.sh list
@@ -23,6 +23,9 @@ Examples:
   ./db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
   ./db.sh copy my_project_db my_project_db_copy
   ./db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
+  ./db.sh copy my_project_db my_project_db_copy --replace-target
+  ./db.sh copy my_project_db my_project_db_copy --ignore-table logs
+  ./db.sh copy my_project_db my_project_db_copy --replace-target --ignore-table logs --ignore-table audit_events
 EOF
 }
 
@@ -73,6 +76,23 @@ db_user_exists() {
   matched_user="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "SELECT User FROM mysql.global_priv WHERE User='${db_user_esc}' AND Host='%' LIMIT 1;")"
   [[ "${matched_user}" == "${db_user}" ]]
+}
+
+db_table_exists() {
+  local db_name="$1"
+  local table_name="$2"
+  local db_name_esc
+  local table_name_esc
+  local matched_table
+
+  db_name_esc="$(escape_sql_string "${db_name}")"
+  table_name_esc="$(escape_sql_string "${table_name}")"
+  matched_table="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+    "SELECT TABLE_NAME
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA='${db_name_esc}' AND TABLE_NAME='${table_name_esc}'
+     LIMIT 1;")"
+  [[ "${matched_table}" == "${table_name}" ]]
 }
 
 prepare_large_import() {
@@ -203,14 +223,124 @@ cmd_import() {
 cmd_copy() {
   local source_db="$1"
   local target_db="$2"
-  local source_user="${3:-${source_db}}"
-  local target_user="${4:-${target_db}}"
-  local target_password="${5:-}"
+  shift 2
+
+  local positional=()
+  local ignore_tables=()
+  local env_ignore_tables="${DB_COPY_IGNORE_TABLES:-}"
+  local source_user
+  local target_user
+  local target_password
+  local replace_target="false"
   local target_db_esc
   local target_user_esc
   local target_password_esc
   local import_client_max_packet="${DB_IMPORT_CLIENT_MAX_ALLOWED_PACKET:-1G}"
   local import_client_net_buffer="${DB_IMPORT_CLIENT_NET_BUFFER_LENGTH:-1M}"
+  local table_name
+  local ignore_db
+  local ignore_table
+  local normalized_ignore_ref
+  local env_ignore_arr=()
+  local dump_ignore_args=()
+  local ignore_table_names=()
+  local target_exists="false"
+  local preserve_dump_file=""
+  local preserve_tables=()
+
+  cleanup_preserve_dump() {
+    if [[ -n "${preserve_dump_file:-}" && -f "${preserve_dump_file:-}" ]]; then
+      rm -f "${preserve_dump_file:-}"
+    fi
+  }
+  trap cleanup_preserve_dump RETURN
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --ignore-table)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          echo "Missing value for --ignore-table."
+          exit 1
+        fi
+        ignore_tables+=("$2")
+        shift 2
+        ;;
+      --ignore-table=*)
+        table_name="${1#*=}"
+        if [[ -z "${table_name}" ]]; then
+          echo "Missing value for --ignore-table."
+          exit 1
+        fi
+        ignore_tables+=("${table_name}")
+        shift
+        ;;
+      --replace-target)
+        replace_target="true"
+        shift
+        ;;
+      --)
+        shift
+        while [[ $# -gt 0 ]]; do
+          positional+=("$1")
+          shift
+        done
+        ;;
+      -*)
+        echo "Unknown option for copy: $1"
+        usage
+        exit 1
+        ;;
+      *)
+        positional+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ ${#positional[@]} -gt 3 ]]; then
+    echo "Too many positional arguments for copy."
+    usage
+    exit 1
+  fi
+
+  source_user="${positional[0]:-${source_db}}"
+  target_user="${positional[1]:-${target_db}}"
+  target_password="${positional[2]:-}"
+
+  if [[ -n "${env_ignore_tables}" ]]; then
+    IFS=',' read -r -a env_ignore_arr <<< "${env_ignore_tables}"
+    for table_name in "${env_ignore_arr[@]}"; do
+      table_name="${table_name#"${table_name%%[![:space:]]*}"}"
+      table_name="${table_name%"${table_name##*[![:space:]]}"}"
+      if [[ -n "${table_name}" ]]; then
+        ignore_tables+=("${table_name}")
+      fi
+    done
+  fi
+
+  for table_name in "${ignore_tables[@]}"; do
+    ignore_db="${source_db}"
+    ignore_table="${table_name}"
+
+    if [[ "${table_name}" == *.* ]]; then
+      ignore_db="${table_name%%.*}"
+      ignore_table="${table_name#*.}"
+    fi
+
+    if [[ "${ignore_db}" != "${source_db}" ]]; then
+      echo "Ignored table '${table_name}' is not in source database '${source_db}'."
+      exit 1
+    fi
+
+    if [[ -z "${ignore_table}" ]]; then
+      echo "Invalid ignored table value: '${table_name}'"
+      exit 1
+    fi
+
+    normalized_ignore_ref="${source_db}.${ignore_table}"
+    dump_ignore_args+=("--ignore-table=${normalized_ignore_ref}")
+    ignore_table_names+=("${ignore_table}")
+  done
 
   if [[ "${source_db}" == "${target_db}" ]]; then
     echo "Source and target database names must be different."
@@ -222,13 +352,37 @@ cmd_copy() {
     exit 1
   fi
 
+  target_db_esc="$(escape_sql_identifier "${target_db}")"
+
   if db_exists "${target_db}"; then
-    echo "Target database already exists: ${target_db}"
-    echo "Choose a new target database name or drop '${target_db}' first."
-    exit 1
+    target_exists="true"
+    if [[ "${replace_target}" == "true" ]]; then
+      if [[ ${#ignore_table_names[@]} -gt 0 ]]; then
+        for table_name in "${ignore_table_names[@]}"; do
+          if db_table_exists "${target_db}" "${table_name}"; then
+            preserve_tables+=("${table_name}")
+          fi
+        done
+        if [[ ${#preserve_tables[@]} -gt 0 ]]; then
+          preserve_dump_file="$(mktemp "${TMPDIR:-/tmp}/db_copy_preserve_${target_db}_XXXXXX.sql")"
+          echo "Preserving target tables before replace: ${preserve_tables[*]}"
+          docker exec "${CONTAINER_NAME}" mariadb-dump \
+            -u"${MYSQL_USER}" -p"${MYSQL_PASS}" \
+            --single-transaction --skip-add-drop-table \
+            "${target_db}" "${preserve_tables[@]}" > "${preserve_dump_file}"
+        fi
+      fi
+
+      echo "Replacing existing target database '${target_db}'..."
+      docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+        "DROP DATABASE \`${target_db_esc}\`;"
+    else
+      echo "Target database already exists: ${target_db}"
+      echo "Choose a new target database name, use --replace-target, or drop '${target_db}' first."
+      exit 1
+    fi
   fi
 
-  target_db_esc="$(escape_sql_identifier "${target_db}")"
   target_user_esc="$(escape_sql_string "${target_user}")"
 
   echo "Creating target database '${target_db}'..."
@@ -261,15 +415,28 @@ cmd_copy() {
 
   prepare_large_import
 
+  if [[ ${#dump_ignore_args[@]} -gt 0 ]]; then
+    echo "Skipping tables: ${ignore_tables[*]}"
+  fi
+
   echo "Copying database '${source_db}' -> '${target_db}'..."
   docker exec "${CONTAINER_NAME}" mariadb-dump \
     -u"${MYSQL_USER}" -p"${MYSQL_PASS}" \
     --single-transaction --routines --triggers --events \
+    "${dump_ignore_args[@]}" \
     "${source_db}" \
     | docker exec -i "${CONTAINER_NAME}" mariadb \
       --max-allowed-packet="${import_client_max_packet}" \
       --net-buffer-length="${import_client_net_buffer}" \
       -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${target_db}"
+
+  if [[ "${target_exists}" == "true" && "${replace_target}" == "true" && -n "${preserve_dump_file}" ]]; then
+    echo "Restoring preserved target tables into '${target_db}'..."
+    docker exec -i "${CONTAINER_NAME}" mariadb \
+      --max-allowed-packet="${import_client_max_packet}" \
+      --net-buffer-length="${import_client_net_buffer}" \
+      -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${target_db}" < "${preserve_dump_file}"
+  fi
 
   echo "Done."
 }
@@ -297,8 +464,8 @@ main() {
       cmd_import "$2" "$3" "${4:-}" "${5:-}"
       ;;
     copy)
-      if [[ $# -lt 3 || $# -gt 6 ]]; then usage; exit 1; fi
-      cmd_copy "$2" "$3" "${4:-}" "${5:-}" "${6:-}"
+      if [[ $# -lt 3 ]]; then usage; exit 1; fi
+      cmd_copy "$2" "$3" "${@:4}"
       ;;
     ""|-h|--help|help)
       usage

@@ -135,6 +135,7 @@ Mailpit service is internal only. To view inbox, proxy `mailpit:8025` through an
 - `DB_IMPORT_CLIENT_NET_BUFFER_LENGTH` (client `--net-buffer-length`, default `1M`)
 - `DB_IMPORT_NET_READ_TIMEOUT` (server `net_read_timeout` during import, default `600`)
 - `DB_IMPORT_NET_WRITE_TIMEOUT` (server `net_write_timeout` during import, default `600`)
+- `DB_COPY_IGNORE_TABLES` (comma-separated tables to skip during `copy`, for example `logs,audit_events`)
 
 ### Pinned image versions
 
@@ -183,8 +184,14 @@ docker exec -it php-fpm /bin/bash
 
 # clone a database into a new one (also clones source user auth to target user by default)
 ./db.sh copy my_project_db my_project_db_copy
+# replace target database if it already exists
+./db.sh copy my_project_db my_project_db_copy --replace-target
 # clone using explicit source/target users and explicit target password
 ./db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
+# clone and skip tables (repeat option as needed)
+./db.sh copy my_project_db my_project_db_copy --ignore-table logs --ignore-table audit_events
+# with --replace-target + --ignore-table, ignored tables are preserved from current target DB
+./db.sh copy my_project_db my_project_db_copy --replace-target --ignore-table core_config_data
 
 # validate compose (base)
 docker compose -f docker-compose.yml config
