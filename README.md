@@ -130,6 +130,11 @@ Mailpit service is internal only. To view inbox, proxy `mailpit:8025` through an
 - `DB_TOOL_USER` (admin user used by `db.sh`, default `root`)
 - `DB_TOOL_PASSWORD` (admin password used by `db.sh`, default falls back to `MARIADB_ROOT_PASSWORD`)
 - `DB_DEFAULT_USER_PASSWORD` (default app-user password when auto-creating DB users, fallback is same as db user name)
+- `DB_IMPORT_SERVER_MAX_ALLOWED_PACKET` (server `max_allowed_packet`, default `1073741824`)
+- `DB_IMPORT_CLIENT_MAX_ALLOWED_PACKET` (client `--max-allowed-packet`, default `1G`)
+- `DB_IMPORT_CLIENT_NET_BUFFER_LENGTH` (client `--net-buffer-length`, default `1M`)
+- `DB_IMPORT_NET_READ_TIMEOUT` (server `net_read_timeout` during import, default `600`)
+- `DB_IMPORT_NET_WRITE_TIMEOUT` (server `net_write_timeout` during import, default `600`)
 
 ### Pinned image versions
 
@@ -175,6 +180,11 @@ docker exec -it php-fpm /bin/bash
 ./db.sh import ./sql/my_project_db.sql.gz my_project_db
 # import with explicit app user/password (also creates/grants before import)
 ./db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
+
+# clone a database into a new one (also clones source user auth to target user by default)
+./db.sh copy my_project_db my_project_db_copy
+# clone using explicit source/target users and explicit target password
+./db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
 
 # validate compose (base)
 docker compose -f docker-compose.yml config
