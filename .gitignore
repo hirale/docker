@@ -6,3 +6,4 @@ nginx/certs/*
 nginx/sites-enabled/*.conf
 nginx/sites-available/*.conf
 .env
+cli-proxy-api/auth

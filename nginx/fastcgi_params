@@ -1,4 +1,4 @@
-fastcgi_param HTTPS on;
+fastcgi_param HTTPS $https if_not_empty;
 fastcgi_param GATEWAY_INTERFACE CGI/1.1;
 fastcgi_param SERVER_SOFTWARE nginx;
 fastcgi_param QUERY_STRING $query_string;
