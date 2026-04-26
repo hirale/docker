@@ -5,6 +5,7 @@ services:
       args:
         PHP_VERSION: "7.4"
         MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
+        NODE_MAJOR: ${NODE_MAJOR:-22}
     container_name: php74-fpm
     user: "www-data"
     working_dir: /var/www/html
@@ -12,6 +13,8 @@ services:
       - ${WEB_ROOT}:/var/www/html/
       - ${PHP_CONFIG}:/usr/local/etc
     restart: unless-stopped
+    ports:
+      - "5173:5173"
     networks:
       - backend
     extra_hosts:

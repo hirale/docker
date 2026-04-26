@@ -4,7 +4,7 @@ server {
     http2 on;
 
     server_name example.local;
-    set $base /var/www/html/example;
+    set $base /var/www/example;
     root $base/public;
     index index.php;
 
@@ -17,7 +17,7 @@ server {
     location ~ \.php$ {
         include snippets/php.conf;
         include snippets/php-upstream-84.conf;
-        fastcgi_param PHP_ADMIN_VALUE "open_basedir=$base/:/usr/lib/php/:/tmp/:/var/www/html";
+        fastcgi_param PHP_ADMIN_VALUE "open_basedir=$base/:/usr/lib/php/:/tmp/:/var/www";
     }
 
     location / {

@@ -2,11 +2,13 @@ ARG PHP_VERSION
 ARG MAILPIT_BINARY_VERSION
 
 FROM php:${PHP_VERSION}-fpm
-WORKDIR /var/www/html/
+WORKDIR /var/www
 
-# System dependencies
+ARG NODE_MAJOR=22
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
+    curl \
     git \
     openssh-client \
     libfreetype6-dev \
@@ -23,20 +25,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
-# PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) \
-        gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets
+        gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets ftp
 
-# PECL extensions
 RUN pecl install redis xdebug \
     && docker-php-ext-enable redis exif \
     && rm -rf /tmp/pear
 
-# Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && mkdir -p /var/www/.composer && chown -R 1000:1000 /var/www/.composer
 
 RUN mkdir -p /var/run/php
 

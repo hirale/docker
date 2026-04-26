@@ -3,9 +3,9 @@ services:
   nginx:
     image: nginx:${NGINX_VERSION}
     container_name: nginx
-    working_dir: /var/www/html
+    working_dir: /var/www
     volumes:
-      - ${WEB_ROOT}:/var/www/html
+      - ${WEB_ROOT}:/var/www
       - ${NGINX_CONFIG}:/etc/nginx
     restart: unless-stopped
     ports:
@@ -29,13 +29,16 @@ services:
       args:
         PHP_VERSION: ${PHP_VERSION:-8.4.8}
         MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
+        NODE_MAJOR: ${NODE_MAJOR:-22}
     container_name: php-fpm
     user: "www-data"
-    working_dir: /var/www/html
+    working_dir: /var/www/
     volumes:
-      - ${WEB_ROOT}:/var/www/html/
+      - ${WEB_ROOT}:/var/www/
       - ${PHP_CONFIG}:/usr/local/etc
     restart: unless-stopped
+    ports:
+      - "5173:5173"
     networks:
       - backend
     extra_hosts:

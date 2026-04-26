@@ -3,13 +3,13 @@
 #[job-exec "laravel"]
 #schedule = @every 1m
 #container = php-fpm
-#command = /usr/local/bin/php /var/www/html/laravel/artisan schedule:run
+#command = /usr/local/bin/php /var/www/laravel/artisan schedule:run
 #user = www-data
 #tty = false
 
 ; [job-exec "openmage"]
 ; schedule = @every 1m
 ; container = php-fpm
-; command = /bin/bash /var/www/html/xxx/pub/cron.sh
+; command = /bin/bash /var/www/xxx/pub/cron.sh
 ; user = www-data
 ; tty = false
