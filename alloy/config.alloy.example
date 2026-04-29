@@ -1,0 +1,117 @@
+// Grafana Alloy config — log shipper.
+//
+// Tails two streams:
+//
+//   1. `security.ndjson` — security/audit firehose. JSON-per-line. Fields
+//      parsed into low-cardinality labels so Grafana can filter by
+//      scope/method/status without exploding stream count. High-cardinality
+//      fields (request_id, ip, user_id) stay in the log line content.
+//
+//   2. `var/log/*.log` — operational logs (system, exception, etc.).
+//      Plain text, no parsing — labels by file basename only.
+
+// ---- security firehose ----
+//
+// Expects pure NDJSON (one JSON object per line, no datetime/level prefix)
+// under var/log/security/. Glob covers additional security-stream files
+// (waf.ndjson, audit.ndjson, …).
+
+local.file_match "security" {
+  path_targets = [{
+    __path__ = "/var/www/myapp/var/log/security/*.ndjson",
+    job      = "myapp",
+    stream   = "security",
+    source   = "php",
+  }]
+}
+
+loki.source.file "security" {
+  targets    = local.file_match.security.targets
+  forward_to = [loki.process.security_json.receiver]
+}
+
+// Promote selected NDJSON fields to labels. Cardinality budget per
+// stream: keep total label combinations under ~10k. method has 7 values,
+// scope has 3, status_class has 5 → 105 stream combinations max.
+loki.process "security_json" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.json {
+    expressions = {
+      method = "method",
+      scope  = "scope",
+      status = "status",
+    }
+  }
+
+  // Bucket status into class labels (2xx/3xx/4xx/5xx) instead of raw
+  // codes — keeps cardinality predictable.
+  stage.template {
+    source   = "status_class"
+    template = "{{ if le (atoi .status) 199 }}1xx{{ else if le (atoi .status) 299 }}2xx{{ else if le (atoi .status) 399 }}3xx{{ else if le (atoi .status) 499 }}4xx{{ else }}5xx{{ end }}"
+  }
+
+  stage.labels {
+    values = {
+      method       = "method",
+      scope        = "scope",
+      status_class = "status_class",
+    }
+  }
+}
+
+// ---- operational logs ----
+
+local.file_match "ops" {
+  path_targets = [{
+    __path__ = "/var/www/myapp/var/log/*.log",
+    job      = "myapp",
+    stream   = "ops",
+    source   = "php",
+  }]
+}
+
+loki.source.file "ops" {
+  targets    = local.file_match.ops.targets
+  forward_to = [loki.process.ops_label.receiver]
+}
+
+// Parse JSON envelope `{ts, level, request_id, channel, msg}` to expose
+// `level` (low cardinality, label-safe) and a `logfile` label from the
+// file basename. `request_id` stays in log content — promoting it to a
+// label would explode stream cardinality.
+loki.process "ops_label" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.regex {
+    source     = "filename"
+    expression = "/var/log/(?P<logfile>[^/]+)\\.log$"
+  }
+
+  stage.json {
+    expressions = {
+      level = "level",
+    }
+  }
+
+  stage.labels {
+    values = {
+      logfile = "logfile",
+      level   = "level",
+    }
+  }
+
+  stage.replace {
+    source     = "level"
+    expression = "^$"
+    replace    = "unknown"
+  }
+}
+
+// ---- write target ----
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

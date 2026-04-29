@@ -1,15 +1,45 @@
 # https://github.com/mcuadros/ofelia
 
+# ---- Example: Laravel scheduler ----
 #[job-exec "laravel"]
 #schedule = @every 1m
 #container = php-fpm
-#command = /usr/local/bin/php /var/www/laravel/artisan schedule:run
+#command = /usr/local/bin/php /var/www/myapp/artisan schedule:run
 #user = www-data
 #tty = false
 
-; [job-exec "openmage"]
-; schedule = @every 1m
-; container = php-fpm
-; command = /bin/bash /var/www/xxx/pub/cron.sh
-; user = www-data
-; tty = false
+# ---- Example: OpenMage / Magento 1 cron ----
+#[job-exec "openmage"]
+#schedule = @every 1m
+#container = php-fpm
+#command = /bin/bash /var/www/myapp/pub/cron.sh
+#user = www-data
+#tty = false
+
+# ---- Maho cron ----
+
+#[job-exec "maho-default"]
+#schedule = */5 * * * *
+#container = php-fpm
+#command = /bin/bash -c "cd /var/www/myapp && php ./maho cron:run default"
+#user = www-data
+#tty = false
+
+#[job-exec "maho-always"]
+#schedule = */5 * * * *
+#container = php-fpm
+#command = /bin/bash -c "cd /var/www/myapp && php ./maho cron:run always"
+#user = www-data
+#tty = false
+
+# ---- Log rotation ----
+# Rotates var/log/*.log (30d) and var/log/security/*.ndjson (90d).
+# Config: /usr/local/etc/logrotate.d/myapp  (copy from php-fpm/conf/logrotate.d/app.example)
+# State:  /var/www/myapp/var/log/.logrotate-state
+
+#[job-exec "logrotate"]
+#schedule = 30 4 * * *
+#container = php-fpm
+#command = /usr/sbin/logrotate -s /var/www/myapp/var/log/.logrotate-state /usr/local/etc/logrotate.d/myapp
+#user = www-data
+#tty = false

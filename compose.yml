@@ -16,7 +16,7 @@ services:
       php-fpm:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "nginx -t -q"]
+      test: [ "CMD-SHELL", "nginx -t -q" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -33,6 +33,11 @@ services:
     container_name: php-fpm
     user: "www-data"
     working_dir: /var/www/
+    environment:
+      # Backend error reporting — read by Hirale_Core_Helper_Sentry. Empty
+      # value = no-op (helper skips initialization). Populate after first-boot
+      # GlitchTip project setup at https://glitchtip.example.com.
+      - BACKEND_GLITCHTIP_DSN=${BACKEND_GLITCHTIP_DSN:-}
     volumes:
       - ${WEB_ROOT}:/var/www/
       - ${PHP_CONFIG}:/usr/local/etc
@@ -47,29 +52,30 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      test: [ "CMD-SHELL", "php-fpm -t >/dev/null 2>&1" ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
 
   mysql:
-    image: mariadb:${MARIADB_VERSION}
+    image: mysql:${MYSQL_VERSION}
     container_name: mysql
+    command: --max-connections=300
     environment:
-      - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_ROOT_HOST=%
-      - MYSQL_DATABASE=${MARIADB_DATABASE}
-      - MYSQL_USER=${MARIADB_USER}
-      - MYSQL_PASSWORD=${MARIADB_PASSWORD}
-      - TZ=${MARIADB_TZ}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=${MYSQL_TZ}
     ports:
       - "3306:3306"
     volumes:
-      - ${MARIADB_DATA_DIR}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "--silent" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +90,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "grep -qa mailpit /proc/1/cmdline"]
+      test: [ "CMD-SHELL", "grep -qa mailpit /proc/1/cmdline" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -97,7 +103,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -115,6 +121,19 @@ services:
       - ${OFELIA_CONFIG}:/etc/ofelia/config.ini
     networks:
       - backend
+
+  # Certbot — on-demand SSL certificate management via DNS-01 (117+ providers).
+  # Not started by default. Use: make ssl-issue DOMAIN=x EMAIL=y CRED=provider
+  # Credentials files: certbot/credentials/<provider>.ini
+  certbot:
+    image: ghcr.io/alexzorin/certbot-dns-multi:latest
+    container_name: certbot
+    profiles:
+      - certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/credentials:/credentials:ro
+      - ./nginx/certs:/output/certs
 
 networks:
   backend:

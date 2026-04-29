@@ -1,0 +1,574 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Infrastructure metrics — MySQL, Redis, nginx. Sourced from Prometheus exporters scraped every 30s.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "MySQL",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 1,
+      "title": "Connections used / max",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "mysql_global_status_threads_connected{job=\"mysql\"} / mysql_global_variables_max_connections{job=\"mysql\"}",
+          "refId": "A",
+          "legendFormat": "used/max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.6},
+              {"color": "red", "value": 0.85}
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Threads running",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "mysql_global_status_threads_running{job=\"mysql\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 20},
+              {"color": "red", "value": 50}
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Queries/sec",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(mysql_global_status_questions{job=\"mysql\"}[1m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}]
+          },
+          "unit": "short",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Slow queries (rate/min)",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(mysql_global_status_slow_queries{job=\"mysql\"}[5m]) * 60",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 10}
+            ]
+          },
+          "unit": "short",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 5,
+      "title": "Connection counts",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "mysql_global_status_threads_connected{job=\"mysql\"}",
+          "refId": "A",
+          "legendFormat": "connected"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "mysql_global_status_threads_running{job=\"mysql\"}",
+          "refId": "B",
+          "legendFormat": "running"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "mysql_global_variables_max_connections{job=\"mysql\"}",
+          "refId": "C",
+          "legendFormat": "max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "showPoints": "never"}
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "Query rate by command",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(mysql_global_status_commands_total{job=\"mysql\",command=~\"select|insert|update|delete\"}[1m])",
+          "refId": "A",
+          "legendFormat": "{{command}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "fillOpacity": 25, "stacking": {"mode": "normal", "group": "A"}, "showPoints": "never"}
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Redis",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "title": "Memory used",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 14},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "redis_memory_used_bytes{job=\"redis\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}]
+          },
+          "unit": "bytes"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 8,
+      "title": "Connected clients",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 14},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "redis_connected_clients{job=\"redis\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 9,
+      "title": "Cache hit rate (5m)",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 14},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(redis_keyspace_hits_total{job=\"redis\"}[5m]) / clamp_min(rate(redis_keyspace_hits_total{job=\"redis\"}[5m]) + rate(redis_keyspace_misses_total{job=\"redis\"}[5m]), 1)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 0.7},
+              {"color": "green", "value": 0.9}
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 10,
+      "title": "Evicted keys (rate/min)",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 14},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(redis_evicted_keys_total{job=\"redis\"}[5m]) * 60",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 100}
+            ]
+          },
+          "unit": "short",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Redis ops/sec",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(redis_commands_processed_total{job=\"redis\"}[1m])",
+          "refId": "A",
+          "legendFormat": "ops/sec"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "fillOpacity": 25, "showPoints": "never"}
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "single"},
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "nginx",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 26},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "title": "Active connections",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 27},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "nginx_connections_active{job=\"nginx\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 13,
+      "title": "Requests/sec",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 27},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(nginx_http_requests_total{job=\"nginx\"}[1m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "blue", "value": null}]
+          },
+          "unit": "reqps",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 14,
+      "title": "Reading / writing / waiting",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 27},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "nginx_connections_reading{job=\"nginx\"}",
+          "refId": "A",
+          "legendFormat": "reading"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "nginx_connections_writing{job=\"nginx\"}",
+          "refId": "B",
+          "legendFormat": "writing"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "nginx_connections_waiting{job=\"nginx\"}",
+          "refId": "C",
+          "legendFormat": "waiting"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 15,
+      "title": "nginx connections + requests over time",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 31},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "nginx_connections_active{job=\"nginx\"}",
+          "refId": "A",
+          "legendFormat": "active"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate(nginx_http_requests_total{job=\"nginx\"}[1m])",
+          "refId": "B",
+          "legendFormat": "requests/sec"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "fillOpacity": 15, "showPoints": "never"}
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Stack health",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 39},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 16,
+      "title": "Prometheus targets up/down",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 40},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "up",
+          "refId": "A",
+          "legendFormat": "{{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "green", "value": 1}
+            ]
+          },
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}
+          ]
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["infrastructure"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Infrastructure",
+  "uid": "infrastructure",
+  "version": 1,
+  "weekStart": ""
+}

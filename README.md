@@ -4,83 +4,119 @@ A practical local stack for PHP projects:
 
 - Nginx (TLS reverse proxy)
 - PHP-FPM (default 8.4, optional 8.5 and 7.4)
-- MariaDB
+- MySQL
 - Redis
 - Mailpit (SMTP + inbox UI via Nginx)
 - Ofelia (container cron)
-
-This repository is optimized for local development with fixed container names and predictable versioning.
-
-## Architecture
-
-- Nginx proxies app traffic to PHP-FPM on the internal Docker network.
-- MariaDB is exposed to host on `3306`.
-- HTTPS is exposed on `443`.
-- Mailpit is **not** directly exposed to host; access it through an Nginx vhost (for example: `mail.domain.com.conf.sample`).
-
-## Prerequisites
-
-- Docker Engine + Docker Compose plugin
-- Local DNS/hosts entries for your dev domains
-- TLS cert/key files if your vhost requires SSL
+- Certbot (SSL via DNS-01, 117+ providers)
 
 ## Quick Start
 
-1. Copy environment file.
-
 ```bash
+# 1. Copy and edit environment file
 cp .env.sample .env
+# Edit .env — set WEB_ROOT, MYSQL_* credentials
+
+# 2. Create an Nginx site
+make site-new NAME=my-site.conf
+# Edit nginx/sites-available/my-site.conf
+make site-enable NAME=my-site.conf
+
+# 3. Add SSL certs (manual or via certbot)
+mkdir -p nginx/certs
+# put *.crt and *.key in nginx/certs/
+
+# 4. Start
+make up
 ```
 
-2. Edit `.env` and set at least:
+Run `make help` to see all available commands.
 
-- `WEB_ROOT` (your local projects root)
-- MariaDB credentials (`MARIADB_*`)
+## Project Structure
 
-3. Create and enable an Nginx site config.
+```
+.
+├── compose.yml                  # Core LNMP services + certbot
+├── compose.observability.yml    # Observability stack (optional)
+├── compose.php74.yml            # PHP 7.4 addon
+├── compose.php85.yml            # PHP 8.5 addon
+├── Makefile                     # Shortcut commands
+├── .env.sample                  # Environment template
+├── config.ini.example           # Ofelia cron config template
+│
+├── certbot/                     # SSL certificate management
+│   ├── credentials/             # DNS provider credential files
+│   ├── conf/                    # Let's Encrypt state (gitignored)
+│
+├── nginx/
+│   ├── nginx.conf
+│   ├── certs/                   # SSL certificates (gitignored)
+│   ├── sites-available/         # Site configs (gitignored)
+│   ├── sites-enabled/           # Enabled sites (symlinks, gitignored)
+│   └── snippets/                # Reusable config snippets
+│
+├── php-fpm/
+│   ├── Dockerfile
+│   └── conf/                    # PHP config (php.ini, etc.)
+│
+├── loki/                        # Loki config (observability)
+├── alloy/                       # Alloy config (observability)
+├── grafana/                     # Grafana provisioning + dashboards
+├── prometheus/                  # Prometheus config
+│
+└── scripts/
+    ├── db.sh                    # Database helper
+    ├── site.sh                  # Nginx site management
+    ├── xdebug.sh                # Xdebug toggle
+    └── logs.sh                  # Container log truncation
+```
+
+## Compose Structure
+
+The stack is split into composable files:
+
+| File | Services | Default |
+|---|---|---|
+| `compose.yml` | nginx, php-fpm, mysql, mailpit, redis, ofelia, certbot | Yes |
+| `compose.observability.yml` | loki, alloy, grafana, prometheus, exporters, glitchtip | No |
+| `compose.php74.yml` | php74-fpm | No |
+| `compose.php85.yml` | php85-fpm | No |
 
 ```bash
-./sitectl.sh new your-site.conf
-# edit nginx/conf/sites-available/your-site.conf
-./sitectl.sh enable your-site.conf
+# Core only
+make up
+
+# Core + observability
+make up-obs
+
+# Core + PHP 8.5
+make up-php85
+
+# Core + PHP 7.4
+make up-php74
+
+# Everything
+make up-all
 ```
 
-4. Add SSL files if needed.
-
-```bash
-mkdir -p nginx/conf/certs
-# put *.crt and *.key in nginx/conf/certs/
-```
-
-5. Start the default stack.
+Or use `docker compose` directly:
 
 ```bash
 docker compose up -d
+docker compose -f compose.yml -f compose.observability.yml up -d
+docker compose -f compose.yml -f compose.php85.yml up -d
 ```
 
 ## Exposed Ports
 
 - `443` -> Nginx
-- `3306` -> MariaDB
+- `3306` -> MySQL
 
 Everything else stays internal by default.
 
 ## Multi-PHP Usage
 
-Default PHP is from `docker-compose.yml` (`PHP_VERSION`, default `8.4.8`).
-
-Start extra PHP versions with override files:
-
-```bash
-# add PHP 8.5
-docker compose -f docker-compose.yml -f docker-compose.php85.yml up -d
-
-# add PHP 7.4
-docker compose -f docker-compose.yml -f docker-compose.php74.yml up -d
-
-# run all (8.4 + 8.5 + 7.4)
-docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compose.php74.yml up -d
-```
+Default PHP is from `compose.yml` (`PHP_VERSION`, default `8.4.8`).
 
 Select PHP per site using Nginx snippet include:
 
@@ -95,6 +131,42 @@ include snippets/php-upstream-85.conf;
 include snippets/php-upstream-74.conf;
 ```
 
+## SSL Certificates (Certbot)
+
+Certbot runs as an on-demand container using `certbot-dns-multi` (supports 117+ DNS providers via lego).
+
+### Setup
+
+1. Copy a credential template:
+
+```bash
+cp certbot/credentials/cloudflare.ini.example certbot/credentials/cloudflare.ini
+# Edit with your API token
+chmod 600 certbot/credentials/cloudflare.ini
+```
+
+2. Issue a certificate:
+
+```bash
+make ssl-issue DOMAIN=example.com EMAIL=you@email.com CRED=cloudflare
+```
+
+3. Renew:
+
+```bash
+make ssl-renew
+```
+
+### Supported DNS Providers
+
+Create a credential file in `certbot/credentials/` for your provider. See `.ini.example` files for format:
+
+- Cloudflare (`cloudflare.ini`)
+- DigitalOcean (`digitalocean.ini`)
+- Porkbun (`porkbun.ini`)
+- GoDaddy (`godaddy.ini`)
+- Route53, Google Cloud, Namecheap, and 110+ more via [lego](https://go-acme.github.io/lego/dns/)
+
 ## Mailpit Integration
 
 PHP uses Mailpit sendmail bridge:
@@ -105,108 +177,85 @@ sendmail_path = "/usr/local/bin/mailpit sendmail --smtp-addr=mailpit:1025"
 
 Mailpit service is internal only. To view inbox, proxy `mailpit:8025` through an Nginx vhost.
 
-## Environment Variables (Important)
+## Observability
 
-### Core runtime
+The observability stack includes:
 
-- `PHP_VERSION`
-- `MARIADB_VERSION`
-- `NGINX_VERSION`
-- `WEB_ROOT`
-- `NGINX_CONFIG`
-- `PHP_CONFIG`
+- **Loki** — log aggregation
+- **Alloy** — log shipper (replaces Promtail)
+- **Grafana** — dashboards + log explorer
+- **Prometheus** — metrics collection
+- **Exporters** — mysqld, redis, nginx metrics
+- **GlitchTip** — Sentry-protocol error tracking
 
-### MariaDB (clarified naming)
-
-- `MARIADB_DATABASE`
-- `MARIADB_USER`
-- `MARIADB_PASSWORD`
-- `MARIADB_ROOT_PASSWORD`
-- `MARIADB_TZ`
-- `MARIADB_DATA_DIR`
-
-### DB helper script (`db.sh`) optional
-
-- `DB_TOOL_USER` (admin user used by `db.sh`, default `root`)
-- `DB_TOOL_PASSWORD` (admin password used by `db.sh`, default falls back to `MARIADB_ROOT_PASSWORD`)
-- `DB_DEFAULT_USER_PASSWORD` (default app-user password when auto-creating DB users, fallback is same as db user name)
-- `DB_IMPORT_SERVER_MAX_ALLOWED_PACKET` (server `max_allowed_packet`, default `1073741824`)
-- `DB_IMPORT_CLIENT_MAX_ALLOWED_PACKET` (client `--max-allowed-packet`, default `1G`)
-- `DB_IMPORT_CLIENT_NET_BUFFER_LENGTH` (client `--net-buffer-length`, default `1M`)
-- `DB_IMPORT_NET_READ_TIMEOUT` (server `net_read_timeout` during import, default `600`)
-- `DB_IMPORT_NET_WRITE_TIMEOUT` (server `net_write_timeout` during import, default `600`)
-- `DB_COPY_IGNORE_TABLES` (comma-separated tables to skip during `copy`, for example `logs,audit_events`)
-
-### Pinned image versions
-
-- `MAILPIT_VERSION_IMAGE`
-- `REDIS_VERSION`
-- `OFELIA_VERSION`
-
-### Build-time Mailpit binary version (inside PHP image)
-
-- `MAILPIT_BINARY_VERSION`
-
-### Ofelia
-
-- `DOCKER_SOCKET`
-- `OFELIA_CONFIG`
-
-## Daily Commands
+### Quick Start
 
 ```bash
-# start / stop
-docker compose up -d
-docker compose down
+# Copy and configure observability configs from their .example files
+cp loki/config.yaml.example loki/config.yaml
+cp alloy/config.alloy.example alloy/config.alloy
+cp prometheus/prometheus.yml.example prometheus/prometheus.yml
+# Edit each file to match your project paths and labels
 
-# logs
-docker compose logs -f nginx
-docker compose logs -f php-fpm
-
-# shell into php container
-docker exec -it php-fpm /bin/bash
-
-# list non-system databases
-./db.sh list
-
-# db export (required db name)
-./db.sh export my_project_db
-# or custom output path
-./db.sh export my_project_db ./sql/my_project_db.sql.gz
-
-# ensure db + same-name user (with privileges on that db)
-./db.sh ensure my_project_db
-
-# db import (.sql or .sql.gz) into target db
-./db.sh import ./sql/my_project_db.sql.gz my_project_db
-# import with explicit app user/password (also creates/grants before import)
-./db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
-
-# clone a database into a new one (also clones source user auth to target user by default)
-./db.sh copy my_project_db my_project_db_copy
-# replace target database if it already exists
-./db.sh copy my_project_db my_project_db_copy --replace-target
-# clone using explicit source/target users and explicit target password
-./db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
-# clone and skip tables (repeat option as needed)
-./db.sh copy my_project_db my_project_db_copy --ignore-table logs --ignore-table audit_events
-# with --replace-target + --ignore-table, ignored tables are preserved from current target DB
-./db.sh copy my_project_db my_project_db_copy --replace-target --ignore-table core_config_data
-
-# validate compose (base)
-docker compose -f docker-compose.yml config
-
-# validate compose (with extra php versions)
-docker compose -f docker-compose.yml -f docker-compose.php85.yml -f docker-compose.php74.yml config
+make up-obs
 ```
 
-## Nginx Site Management Helper
+Access Grafana via your configured Nginx vhost (proxied to `grafana:3000`).
+
+## Database Helper (`scripts/db.sh`)
 
 ```bash
-./sitectl.sh list
-./sitectl.sh new mysite.conf
-./sitectl.sh enable mysite.conf
-./sitectl.sh disable mysite.conf
+./scripts/db.sh list                                    # List databases
+./scripts/db.sh shell                                   # Open MySQL REPL
+./scripts/db.sh shell my_project_db                     # Open MySQL REPL for a database
+./scripts/db.sh export my_project_db                    # Export to sql/
+./scripts/db.sh ensure my_project_db                    # Create DB + user
+./scripts/db.sh import ./sql/dump.sql.gz my_project_db  # Import
+./scripts/db.sh copy my_project_db my_project_db_copy   # Clone
+```
+
+See `./scripts/db.sh help` for all options.
+
+## Nginx Site Management (`scripts/site.sh`)
+
+```bash
+make site-list                    # List available/enabled sites
+make site-new NAME=my-site.conf   # Create from template
+make site-enable NAME=my-site.conf
+make site-disable NAME=my-site.conf
+```
+
+## Xdebug (`scripts/xdebug.sh`)
+
+Xdebug is disabled by default. Toggle it without editing files manually:
+
+```bash
+make xdebug-on      # Enable + restart php-fpm
+make xdebug-off     # Disable + restart php-fpm
+make xdebug-status  # Show current state
+```
+
+IDE settings: host `host.docker.internal`, port `9003`, idekey `VSCODE`.
+
+## Log Rotation
+
+The php-fpm image ships with `logrotate`. Copy the example policy and configure an Ofelia job to run it on a schedule.
+
+```bash
+cp php-fpm/conf/logrotate.d/app.example php-fpm/conf/logrotate.d/myapp
+# Edit paths in php-fpm/conf/logrotate.d/myapp
+```
+
+The example `config.ini.example` includes a ready-made Ofelia `logrotate` job. After updating `config.ini`:
+
+```bash
+docker compose restart ofelia
+
+# Manual run (verification)
+docker exec -u www-data php-fpm \
+  /usr/sbin/logrotate -f \
+  -s /var/www/myapp/var/log/.logrotate-state \
+  /usr/local/etc/logrotate.d/myapp
 ```
 
 ## Healthchecks
@@ -221,14 +270,26 @@ Core services include healthchecks in Compose:
 
 This improves startup ordering and visibility via `docker compose ps`.
 
+## Environment Variables
+
+See `.env.sample` for the full reference. Key variables:
+
+| Variable | Description |
+|---|---|
+| `WEB_ROOT` | Local projects root path |
+| `PHP_VERSION` | Default PHP version (8.4.8) |
+| `MYSQL_*` | Database credentials |
+| `NGINX_VERSION` | Nginx image tag |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password (observability) |
+
 ## Troubleshooting
 
 - **Nginx 502/Bad Gateway**
-  - Check `php-fpm` container is healthy: `docker compose ps`
+  - Check `php-fpm` container is healthy: `make ps`
   - Check vhost uses correct upstream snippet (`84/85/74`).
 
 - **DB connection failed**
-  - Confirm `.env` credentials and `MARIADB_DATABASE` match app config.
+  - Confirm `.env` credentials and `MYSQL_DATABASE` match app config.
   - Confirm `mysql` is healthy and port `3306` is free on host.
 
 - **Mail not visible**

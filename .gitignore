@@ -7,4 +7,20 @@ nginx/sites-enabled/*.conf
 nginx/sites-available/*.conf
 .env
 config.ini
+
+# certbot
+certbot/conf/
+certbot/credentials/*.ini
+!certbot/credentials/*.ini.example
+
+# observability configs (copy from *.example and customise)
+alloy/config.alloy
+loki/config.yaml
+prometheus/prometheus.yml
+grafana/provisioning/dashboards/dashboards.yaml
+grafana/provisioning/datasources/*.yaml
+grafana/dashboards/*.json
+php-fpm/conf/logrotate.d/*
+!php-fpm/conf/logrotate.d/*.example
+
 cli-proxy-api/auth

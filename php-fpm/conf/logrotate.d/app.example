@@ -1,0 +1,28 @@
+# Logrotate config for var/log/ tree.
+#
+# Two stanzas split by purpose. Patterns are mutually exclusive — `*.log`
+# does not match `security.ndjson`, so logrotate sees no overlap.
+#
+# `copytruncate` keeps PHP-FPM's open file handle valid across rotation.
+# State file lives under var/log/ so logrotate can run as the app user
+# without elevation.
+
+/var/www/myapp/var/log/*.log {
+    daily
+    rotate 30
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+
+/var/www/myapp/var/log/security/*.ndjson {
+    daily
+    rotate 90
+    compress
+    missingok
+    notifempty
+    copytruncate
+    dateext
+    dateformat -%Y%m%d
+}

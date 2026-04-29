@@ -1,31 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
 CONTAINER_NAME="mysql"
 
 usage() {
   cat <<'EOF'
 Usage:
-  ./db.sh list
-  ./db.sh export <database> [output.sql.gz]
-  ./db.sh ensure <database> [db_user] [db_password]
-  ./db.sh import <dump.sql|dump.sql.gz> <database> [db_user] [db_password]
-  ./db.sh copy <source_db> <target_db> [source_user] [target_user] [target_password] [--replace-target] [--ignore-table table]
+  ./scripts/db.sh list
+  ./scripts/db.sh shell [database]
+  ./scripts/db.sh export <database> [output.sql.gz]
+  ./scripts/db.sh ensure <database> [db_user] [db_password]
+  ./scripts/db.sh import <dump.sql|dump.sql.gz> <database> [db_user] [db_password]
+  ./scripts/db.sh copy <source_db> <target_db> [source_user] [target_user] [target_password] [--replace-target] [--ignore-table table]
 
 Examples:
-  ./db.sh list
-  ./db.sh export my_project_db
-  ./db.sh export my_project_db ./sql/my_project_db.sql.gz
-  ./db.sh ensure my_project_db
-  ./db.sh import ./sql/my_project_db.sql.gz my_project_db
-  ./db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
-  ./db.sh copy my_project_db my_project_db_copy
-  ./db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
-  ./db.sh copy my_project_db my_project_db_copy --replace-target
-  ./db.sh copy my_project_db my_project_db_copy --ignore-table logs
-  ./db.sh copy my_project_db my_project_db_copy --replace-target --ignore-table logs --ignore-table audit_events
+  ./scripts/db.sh list
+  ./scripts/db.sh shell
+  ./scripts/db.sh shell my_project_db
+  ./scripts/db.sh export my_project_db
+  ./scripts/db.sh export my_project_db ./sql/my_project_db.sql.gz
+  ./scripts/db.sh ensure my_project_db
+  ./scripts/db.sh import ./sql/my_project_db.sql.gz my_project_db
+  ./scripts/db.sh import ./sql/my_project_db.sql.gz my_project_db my_project_db strong_password
+  ./scripts/db.sh copy my_project_db my_project_db_copy
+  ./scripts/db.sh copy my_project_db my_project_db_copy my_project_db my_project_db_copy strong_password
+  ./scripts/db.sh copy my_project_db my_project_db_copy --replace-target
+  ./scripts/db.sh copy my_project_db my_project_db_copy --ignore-table logs
+  ./scripts/db.sh copy my_project_db my_project_db_copy --replace-target --ignore-table logs --ignore-table audit_events
 EOF
 }
 
@@ -41,9 +44,9 @@ require_env() {
 
 require_mysql_auth() {
   MYSQL_USER="${DB_TOOL_USER:-root}"
-  MYSQL_PASS="${DB_TOOL_PASSWORD:-${MARIADB_ROOT_PASSWORD:-${MARIADB_PASSWORD:-}}}"
+  MYSQL_PASS="${DB_TOOL_PASSWORD:-${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD:-}}}"
   if [[ -z "${MYSQL_PASS}" ]]; then
-    echo "Missing DB password in .env. Set MARIADB_ROOT_PASSWORD or DB_TOOL_PASSWORD."
+    echo "Missing DB password in .env. Set MYSQL_ROOT_PASSWORD or DB_TOOL_PASSWORD."
     exit 1
   fi
 }
@@ -62,7 +65,7 @@ db_exists() {
   local matched_db
 
   db_name_esc="$(escape_sql_string "${db_name}")"
-  matched_db="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  matched_db="$(docker exec "${CONTAINER_NAME}" mysql -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='${db_name_esc}' LIMIT 1;")"
   [[ "${matched_db}" == "${db_name}" ]]
 }
@@ -73,8 +76,8 @@ db_user_exists() {
   local matched_user
 
   db_user_esc="$(escape_sql_string "${db_user}")"
-  matched_user="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
-    "SELECT User FROM mysql.global_priv WHERE User='${db_user_esc}' AND Host='%' LIMIT 1;")"
+  matched_user="$(docker exec "${CONTAINER_NAME}" mysql -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+    "SELECT User FROM mysql.user WHERE User='${db_user_esc}' AND Host='%' LIMIT 1;")"
   [[ "${matched_user}" == "${db_user}" ]]
 }
 
@@ -87,7 +90,7 @@ db_table_exists() {
 
   db_name_esc="$(escape_sql_string "${db_name}")"
   table_name_esc="$(escape_sql_string "${table_name}")"
-  matched_table="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  matched_table="$(docker exec "${CONTAINER_NAME}" mysql -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "SELECT TABLE_NAME
      FROM information_schema.TABLES
      WHERE TABLE_SCHEMA='${db_name_esc}' AND TABLE_NAME='${table_name_esc}'
@@ -100,8 +103,8 @@ prepare_large_import() {
   local import_net_read_timeout="${DB_IMPORT_NET_READ_TIMEOUT:-600}"
   local import_net_write_timeout="${DB_IMPORT_NET_WRITE_TIMEOUT:-600}"
 
-  echo "Preparing MariaDB for large import (packet/timeouts)..."
-  docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  echo "Preparing MySQL for large import (packet/timeouts)..."
+  docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "SET GLOBAL max_allowed_packet=${import_server_max_packet};
      SET GLOBAL net_read_timeout=${import_net_read_timeout};
      SET GLOBAL net_write_timeout=${import_net_write_timeout};"
@@ -119,9 +122,8 @@ clone_user_auth() {
 
   source_user_esc="$(escape_sql_string "${source_user}")"
   target_user_esc="$(escape_sql_string "${target_user}")"
-  auth_row="$(docker exec "${CONTAINER_NAME}" mariadb -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
-    "SELECT COALESCE(JSON_VALUE(Priv,'$.plugin'),''), COALESCE(JSON_VALUE(Priv,'$.authentication_string'),'')
-     FROM mysql.global_priv
+  auth_row="$(docker exec "${CONTAINER_NAME}" mysql -N -B -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+    "SELECT plugin, authentication_string FROM mysql.user
      WHERE User='${source_user_esc}' AND Host='%'
      LIMIT 1;" 2>/dev/null || true)"
   if [[ -z "${auth_row}" ]]; then
@@ -136,19 +138,26 @@ clone_user_auth() {
 
   if [[ -n "${auth_string}" ]]; then
     auth_string_esc="$(escape_sql_string "${auth_string}")"
-    docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
-      "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%';
-       ALTER USER '${target_user_esc}'@'%' IDENTIFIED VIA ${auth_plugin} USING '${auth_string_esc}';"
+    docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+      "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%' IDENTIFIED WITH ${auth_plugin} AS '${auth_string_esc}';"
   else
-    docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
-      "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%';
-       ALTER USER '${target_user_esc}'@'%' IDENTIFIED VIA ${auth_plugin};"
+    docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+      "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%' IDENTIFIED WITH ${auth_plugin};"
   fi
 }
 
 cmd_list() {
-  docker exec "${CONTAINER_NAME}" mariadb -N -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  docker exec "${CONTAINER_NAME}" mysql -N -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "SHOW DATABASES;" | grep -Ev "^(information_schema|performance_schema|mysql|sys)$" || true
+}
+
+cmd_shell() {
+  local db_name="${1:-}"
+  if [[ -n "${db_name}" ]]; then
+    docker exec -it "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${db_name}"
+  else
+    docker exec -it "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}"
+  fi
 }
 
 cmd_export() {
@@ -163,7 +172,7 @@ cmd_export() {
 
   mkdir -p "$(dirname "${output_path}")"
   echo "Exporting '${db_name}' from container '${CONTAINER_NAME}'..."
-  docker exec "${CONTAINER_NAME}" mariadb-dump -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${db_name}" | gzip > "${output_path}"
+  docker exec "${CONTAINER_NAME}" mysqldump -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${db_name}" | gzip > "${output_path}"
   echo "Done: ${output_path}"
 }
 
@@ -180,7 +189,7 @@ cmd_ensure() {
   db_password_esc="$(escape_sql_string "${db_password}")"
 
   echo "Ensuring database '${db_name}' and user '${db_user}'..."
-  docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "CREATE DATABASE IF NOT EXISTS \`${db_name_esc}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
      CREATE USER IF NOT EXISTS '${db_user_esc}'@'%' IDENTIFIED BY '${db_password_esc}';
      ALTER USER '${db_user_esc}'@'%' IDENTIFIED BY '${db_password_esc}';
@@ -207,12 +216,12 @@ cmd_import() {
 
   echo "Importing '${dump_file}' into '${db_name}' on container '${CONTAINER_NAME}'..."
   if [[ "${dump_file}" == *.gz ]]; then
-    gzip -dc "${dump_file}" | docker exec -i "${CONTAINER_NAME}" mariadb \
+    gzip -dc "${dump_file}" | docker exec -i "${CONTAINER_NAME}" mysql \
       --max-allowed-packet="${import_client_max_packet}" \
       --net-buffer-length="${import_client_net_buffer}" \
       -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${db_name}"
   else
-    docker exec -i "${CONTAINER_NAME}" mariadb \
+    docker exec -i "${CONTAINER_NAME}" mysql \
       --max-allowed-packet="${import_client_max_packet}" \
       --net-buffer-length="${import_client_net_buffer}" \
       -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${db_name}" < "${dump_file}"
@@ -366,7 +375,7 @@ cmd_copy() {
         if [[ ${#preserve_tables[@]} -gt 0 ]]; then
           preserve_dump_file="$(mktemp "${TMPDIR:-/tmp}/db_copy_preserve_${target_db}_XXXXXX.sql")"
           echo "Preserving target tables before replace: ${preserve_tables[*]}"
-          docker exec "${CONTAINER_NAME}" mariadb-dump \
+          docker exec "${CONTAINER_NAME}" mysqldump \
             -u"${MYSQL_USER}" -p"${MYSQL_PASS}" \
             --single-transaction --skip-add-drop-table \
             "${target_db}" "${preserve_tables[@]}" > "${preserve_dump_file}"
@@ -374,7 +383,7 @@ cmd_copy() {
       fi
 
       echo "Replacing existing target database '${target_db}'..."
-      docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+      docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
         "DROP DATABASE \`${target_db_esc}\`;"
     else
       echo "Target database already exists: ${target_db}"
@@ -386,7 +395,7 @@ cmd_copy() {
   target_user_esc="$(escape_sql_string "${target_user}")"
 
   echo "Creating target database '${target_db}'..."
-  docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "CREATE DATABASE IF NOT EXISTS \`${target_db_esc}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
   if db_user_exists "${target_user}"; then
@@ -394,7 +403,7 @@ cmd_copy() {
   elif [[ -n "${target_password}" ]]; then
     target_password_esc="$(escape_sql_string "${target_password}")"
     echo "Creating user '${target_user}' with provided password..."
-    docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+    docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
       "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%' IDENTIFIED BY '${target_password_esc}';
        ALTER USER '${target_user_esc}'@'%' IDENTIFIED BY '${target_password_esc}';"
   else
@@ -403,13 +412,13 @@ cmd_copy() {
       target_password="${DB_DEFAULT_USER_PASSWORD:-${target_user}}"
       target_password_esc="$(escape_sql_string "${target_password}")"
       echo "Could not copy source credentials; using default password fallback for '${target_user}'."
-      docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+      docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
         "CREATE USER IF NOT EXISTS '${target_user_esc}'@'%' IDENTIFIED BY '${target_password_esc}';
          ALTER USER '${target_user_esc}'@'%' IDENTIFIED BY '${target_password_esc}';"
     fi
   fi
 
-  docker exec "${CONTAINER_NAME}" mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
+  docker exec "${CONTAINER_NAME}" mysql -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -e \
     "GRANT ALL PRIVILEGES ON \`${target_db_esc}\`.* TO '${target_user_esc}'@'%';
      FLUSH PRIVILEGES;"
 
@@ -420,19 +429,19 @@ cmd_copy() {
   fi
 
   echo "Copying database '${source_db}' -> '${target_db}'..."
-  docker exec "${CONTAINER_NAME}" mariadb-dump \
+  docker exec "${CONTAINER_NAME}" mysqldump \
     -u"${MYSQL_USER}" -p"${MYSQL_PASS}" \
     --single-transaction --routines --triggers --events \
     "${dump_ignore_args[@]}" \
     "${source_db}" \
-    | docker exec -i "${CONTAINER_NAME}" mariadb \
+    | docker exec -i "${CONTAINER_NAME}" mysql \
       --max-allowed-packet="${import_client_max_packet}" \
       --net-buffer-length="${import_client_net_buffer}" \
       -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${target_db}"
 
   if [[ "${target_exists}" == "true" && "${replace_target}" == "true" && -n "${preserve_dump_file}" ]]; then
     echo "Restoring preserved target tables into '${target_db}'..."
-    docker exec -i "${CONTAINER_NAME}" mariadb \
+    docker exec -i "${CONTAINER_NAME}" mysql \
       --max-allowed-packet="${import_client_max_packet}" \
       --net-buffer-length="${import_client_net_buffer}" \
       -u"${MYSQL_USER}" -p"${MYSQL_PASS}" "${target_db}" < "${preserve_dump_file}"
@@ -450,6 +459,10 @@ main() {
     list)
       if [[ $# -ne 1 ]]; then usage; exit 1; fi
       cmd_list
+      ;;
+    shell)
+      if [[ $# -gt 2 ]]; then usage; exit 1; fi
+      cmd_shell "${2:-}"
       ;;
     export)
       if [[ $# -lt 2 || $# -gt 3 ]]; then usage; exit 1; fi
@@ -471,7 +484,7 @@ main() {
       usage
       ;;
     *)
-      echo "Unknown command: ${cmd}"
+      echo "Unknown command: ${cmd}" >&2
       usage
       exit 1
       ;;

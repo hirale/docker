@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxslt-dev \
     libsodium-dev \
     libicu-dev \
+    logrotate \
     unzip \
     zip \
     && rm -rf /var/lib/apt/lists/*

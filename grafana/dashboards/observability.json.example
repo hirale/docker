@@ -1,0 +1,394 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Forensic + operational log dashboard. Sources: var/log/security/*.ndjson (security firehose) and var/log/*.log (operational).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Security Firehose",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 1,
+      "title": "Requests (last 5m)",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "sum(count_over_time({stream=\"security\"}[5m]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Error rate (4xx + 5xx, last 5m)",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "(sum(count_over_time({stream=\"security\",status_class=~\"4..|5..\"}[5m])) or vector(0)) / (sum(count_over_time({stream=\"security\"}[5m])) > 0)",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.05},
+              {"color": "red", "value": 0.20}
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "p95 duration (last 5m)",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "quantile_over_time(0.95, {stream=\"security\"} | json | unwrap duration_ms [5m])",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 500},
+              {"color": "red", "value": 2000}
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "PII redacted (last 5m)",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "sum(count_over_time({stream=\"security\"} | json | pii_redacted=\"true\" [5m]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 5,
+      "title": "Requests/min by status_class",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "sum by (status_class) (count_over_time({stream=\"security\"}[1m]))",
+          "queryType": "range",
+          "refId": "A",
+          "legendFormat": "{{status_class}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "fillOpacity": 80,
+            "stacking": {"mode": "normal", "group": "A"},
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "2xx"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "3xx"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}]},
+          {"matcher": {"id": "byName", "options": "4xx"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]},
+          {"matcher": {"id": "byName", "options": "5xx"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+        ]
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "Requests/min by scope",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "sum by (scope) (count_over_time({stream=\"security\"}[1m]))",
+          "queryType": "range",
+          "refId": "A",
+          "legendFormat": "{{scope}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "fillOpacity": 80,
+            "stacking": {"mode": "normal", "group": "A"},
+            "showPoints": "never"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}
+      }
+    },
+    {
+      "type": "table",
+      "id": 7,
+      "title": "Top 10 URLs (last 1h)",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 13},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "topk(10, sum by (url) (count_over_time({stream=\"security\"} | json [1h])))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {"Time": true}, "indexByName": {"url": 0, "Value": 1}}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}}
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {"show": false}
+      }
+    },
+    {
+      "type": "table",
+      "id": 8,
+      "title": "Top 10 IPs (last 1h)",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 13},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "topk(10, sum by (ip) (count_over_time({stream=\"security\"} | json [1h])))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {"Time": true}, "indexByName": {"ip": 0, "Value": 1}}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}}
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {"show": false}
+      }
+    },
+    {
+      "type": "logs",
+      "id": 9,
+      "title": "Recent 4xx / 5xx requests",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 23},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "{stream=\"security\",status_class=~\"4..|5..\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Operational Logs",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 33},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 10,
+      "title": "Log lines/min by file",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 34},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "sum by (logfile) (count_over_time({stream=\"ops\"}[1m]))",
+          "queryType": "range",
+          "refId": "A",
+          "legendFormat": "{{logfile}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {"mode": "normal", "group": "A"}
+          }
+        }
+      },
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "desc"},
+        "legend": {"displayMode": "list", "placement": "bottom"}
+      }
+    },
+    {
+      "type": "logs",
+      "id": 11,
+      "title": "Recent exceptions",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 42},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "expr": "{stream=\"ops\",logfile=\"exception\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "exact",
+        "sortOrder": "Descending"
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["observability"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Observability",
+  "uid": "observability",
+  "version": 1,
+  "weekStart": ""
+}
