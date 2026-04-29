@@ -27,9 +27,9 @@ services:
     build:
       context: ./php-fpm
       args:
-        PHP_VERSION: ${PHP_VERSION:-8.4.8}
-        MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
-        NODE_MAJOR: ${NODE_MAJOR:-22}
+        PHP_VERSION: ${PHP_VERSION}
+        MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION}
+        NODE_MAJOR: ${NODE_MAJOR}
     container_name: php-fpm
     user: "www-data"
     working_dir: /var/www/
@@ -37,7 +37,7 @@ services:
       # Backend error reporting — read by Hirale_Core_Helper_Sentry. Empty
       # value = no-op (helper skips initialization). Populate after first-boot
       # GlitchTip project setup at https://glitchtip.example.com.
-      - BACKEND_GLITCHTIP_DSN=${BACKEND_GLITCHTIP_DSN:-}
+      - BACKEND_GLITCHTIP_DSN=${BACKEND_GLITCHTIP_DSN}
     volumes:
       - ${WEB_ROOT}:/var/www/
       - ${PHP_CONFIG}:/usr/local/etc
@@ -61,7 +61,7 @@ services:
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
-    command: --max-connections=300
+    command: --max-connections=${MYSQL_MAX_CONNECTIONS}
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_ROOT_HOST=%

@@ -28,6 +28,10 @@ scrape_configs:
     static_configs:
       - targets: ['nginx-exporter:9113']
 
+  - job_name: phpfpm
+    static_configs:
+      - targets: ['phpfpm-exporter:9253']
+
   - job_name: alloy
     static_configs:
       - targets: ['alloy:12345']
