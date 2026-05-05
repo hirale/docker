@@ -72,7 +72,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "--silent" ]
@@ -138,3 +138,6 @@ services:
 networks:
   backend:
     driver: bridge
+
+volumes:
+  mysql-data:
