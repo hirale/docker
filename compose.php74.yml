@@ -8,13 +8,15 @@ services:
         NODE_MAJOR: ${NODE_MAJOR:-22}
     container_name: php74-fpm
     user: "www-data"
-    working_dir: /var/www/html
+    working_dir: /var/www
     volumes:
-      - ${WEB_ROOT}:/var/www/html/
-      - ${PHP_CONFIG}:/usr/local/etc
+      - ${WEB_ROOT}:/var/www/
+      # Mount only customised config so the image keeps its generated conf.d/*.ini
+      - ${PHP_CONFIG}/php/php.ini:/usr/local/etc/php/php.ini
+      - ${PHP_CONFIG}/php/conf.d/docker-php-ext-opcache.ini:/usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
+      - ${PHP_CONFIG}/php/conf.d/docker-php-ext-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+      - ${PHP_CONFIG}/logrotate.d:/usr/local/etc/logrotate.d
     restart: unless-stopped
-    ports:
-      - "5173:5173"
     networks:
       - backend
     extra_hosts:

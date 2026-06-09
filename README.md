@@ -3,7 +3,7 @@
 A practical local stack for PHP projects:
 
 - Nginx (TLS reverse proxy)
-- PHP-FPM (default 8.4, optional 8.5 and 7.4)
+- PHP-FPM (default 8.5, optional 7.4 and 8.5 side-by-side addons)
 - MySQL
 - Redis
 - Mailpit (SMTP + inbox UI via Nginx)
@@ -22,9 +22,9 @@ make site-new NAME=my-site.conf
 # Edit nginx/sites-available/my-site.conf
 make site-enable NAME=my-site.conf
 
-# 3. Add SSL certs (manual or via certbot)
-mkdir -p nginx/certs
-# put *.crt and *.key in nginx/certs/
+# 3. Add SSL certs — self-signed for local dev, or real ones via certbot
+make certs-dev DOMAIN=my-site.test       # self-signed pair into nginx/certs/
+# (or `make ssl-issue …` for Let's Encrypt; a cert must exist before `make up`)
 
 # 4. Start
 make up

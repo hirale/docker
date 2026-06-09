@@ -21,14 +21,30 @@
 #[job-exec "maho-default"]
 #schedule = */5 * * * *
 #container = php-fpm
-#command = /bin/bash -c "cd /var/www/myapp && php ./maho cron:run default"
+#command = php /var/www/myapp/maho cron:run default
 #user = www-data
 #tty = false
 
 #[job-exec "maho-always"]
 #schedule = */5 * * * *
 #container = php-fpm
-#command = /bin/bash -c "cd /var/www/myapp && php ./maho cron:run always"
+#command = php /var/www/myapp/maho cron:run always
+#user = www-data
+#tty = false
+
+# ---- Example: frequent @every workers (queue processors, async jobs) ----
+
+#[job-exec "worker-reconcile"]
+#schedule = @every 1m
+#container = php-fpm
+#command = php /var/www/myapp/maho cron:run your_reconcile_group
+#user = www-data
+#tty = false
+
+#[job-exec "worker-queue"]
+#schedule = @every 1m
+#container = php-fpm
+#command = php /var/www/myapp/maho cron:run your_queue_group
 #user = www-data
 #tty = false
 

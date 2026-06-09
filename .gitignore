@@ -1,8 +1,6 @@
 mysql/
 sql/
 nginx/certs/*
-!nginx/certs/domain.com.crt
-!nginx/certs/domain.com.key
 nginx/sites-enabled/*.conf
 nginx/sites-available/*.conf
 .env

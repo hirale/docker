@@ -10,7 +10,7 @@ COMPOSE_PHP85    := -f compose.php85.yml
 
 .PHONY: help up down restart ps logs shell build \
         up-obs down-obs up-php74 up-php85 up-all \
-        ssl-issue ssl-renew ssl-reload \
+        ssl-issue ssl-renew ssl-reload certs-dev \
         db-list db-shell db-export db-import db-ensure db-copy \
         site-list site-new site-enable site-disable \
         xdebug-on xdebug-off xdebug-status \
@@ -96,6 +96,15 @@ ssl-renew: ## Renew all SSL certs
 
 ssl-reload: ## Reload nginx SSL config
 	docker exec nginx nginx -s reload
+
+certs-dev: ## Generate a self-signed dev cert into nginx/certs (DOMAIN=localhost)
+	@mkdir -p nginx/certs
+	docker run --rm -v "$(CURDIR)/nginx/certs:/certs" alpine/openssl req -x509 -nodes \
+		-newkey rsa:2048 -days 825 \
+		-keyout /certs/$(or $(DOMAIN),localhost).key \
+		-out /certs/$(or $(DOMAIN),localhost).crt \
+		-subj "/CN=$(or $(DOMAIN),localhost)" \
+		-addext "subjectAltName=DNS:$(or $(DOMAIN),localhost),DNS:*.$(or $(DOMAIN),localhost)"
 
 # ──────────────────────────────────────────────
 # Database
