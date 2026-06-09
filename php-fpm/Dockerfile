@@ -26,11 +26,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
+# opcache is compiled into PHP core on 8.4/8.5 (no separate module to install — installing
+# it fails on 8.5); 7.4 ships it as a loadable .so, so enable it defensively. The subshell
+# scopes `|| true` to the enable only, so a real ext-install failure still fails the build.
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
-    && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) \
-        gd intl exif bcmath pdo_mysql zip xsl opcache mysqli soap sodium sockets ftp
+        gd intl exif bcmath pdo_mysql zip xsl mysqli soap sodium sockets ftp \
+    && (docker-php-ext-enable opcache 2>/dev/null || true)
 
 RUN pecl install redis xdebug \
     && docker-php-ext-enable redis exif \
