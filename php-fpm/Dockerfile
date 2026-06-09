@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libxslt-dev \
     libsodium-dev \
+    libssl-dev \
     libicu-dev \
     logrotate \
     unzip \
