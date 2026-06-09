@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  build-php:
+    name: Build php-fpm (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["7.4", "8.4", "8.5"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build php-fpm image
+        run: docker build --build-arg PHP_VERSION=${{ matrix.php }} -t lnmp-php-fpm:${{ matrix.php }} ./php-fpm
+
+      - name: PHP version + core extensions load
+        run: |
+          docker run --rm lnmp-php-fpm:${{ matrix.php }} php -v
+          docker run --rm lnmp-php-fpm:${{ matrix.php }} sh -c '
+            set -e
+            for ext in pdo_mysql mysqli gd intl redis soap sodium zip xsl bcmath; do
+              php -m | grep -qi "^$ext$" || { echo "missing extension: $ext"; exit 1; }
+            done
+            echo "all core extensions present"
+          '
+
+      - name: php-fpm config test
+        run: docker run --rm lnmp-php-fpm:${{ matrix.php }} php-fpm -t
+
+  validate-compose:
+    name: Validate compose files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed .env from sample
+        run: cp .env.sample .env
+
+      - name: Validate core compose
+        run: docker compose -f compose.yml config >/dev/null
+
+      - name: Validate each overlay against core
+        run: |
+          set -e
+          for overlay in compose.php74.yml compose.php85.yml compose.observability.yml; do
+            if [ -f "$overlay" ]; then
+              docker compose -f compose.yml -f "$overlay" config >/dev/null
+              echo "OK: $overlay"
+            fi
+          done
+
+  nginx-config:
+    name: nginx -t (best-effort)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test nginx config
+        run: |
+          NGINX_VERSION="$(grep -E '^NGINX_VERSION=' .env.sample | cut -d= -f2)"
+          docker run --rm -v "$PWD/nginx:/etc/nginx:ro" "nginx:${NGINX_VERSION:-stable}" nginx -t
