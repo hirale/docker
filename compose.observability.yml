@@ -7,6 +7,13 @@
 
 name: lnmp
 
+# dockerd's default json-file driver never rotates; cap every container's log.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 x-glitchtip-env: &glitchtip-env
   DATABASE_URL: postgres://glitchtip:${GLITCHTIP_POSTGRES_PASSWORD}@glitchtip-postgres:5432/glitchtip
   REDIS_URL: ${GLITCHTIP_REDIS_URL}
@@ -21,6 +28,7 @@ services:
     image: grafana/loki:${LOKI_VERSION}
     container_name: loki
     restart: unless-stopped
+    logging: *default-logging
     command: -config.file=/etc/loki/config.yaml
     volumes:
       - ./loki/config.yaml:/etc/loki/config.yaml:ro
@@ -38,6 +46,7 @@ services:
     image: grafana/alloy:${ALLOY_VERSION}
     container_name: alloy
     restart: unless-stopped
+    logging: *default-logging
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
@@ -57,6 +66,7 @@ services:
     image: postgres:${GLITCHTIP_POSTGRES_VERSION}
     container_name: glitchtip-postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       - POSTGRES_USER=glitchtip
       - POSTGRES_PASSWORD=${GLITCHTIP_POSTGRES_PASSWORD}
@@ -76,6 +86,7 @@ services:
     image: glitchtip/glitchtip:${GLITCHTIP_VERSION}
     container_name: glitchtip
     restart: unless-stopped
+    logging: *default-logging
     environment:
       <<: *glitchtip-env
       PORT: "8000"
@@ -101,6 +112,7 @@ services:
     image: glitchtip/glitchtip:${GLITCHTIP_VERSION}
     container_name: glitchtip-worker
     restart: unless-stopped
+    logging: *default-logging
     command: ./bin/run-celery-with-beat.sh
     environment:
       <<: *glitchtip-env
@@ -118,6 +130,7 @@ services:
     image: prom/prometheus:${PROMETHEUS_VERSION}
     container_name: prometheus
     restart: unless-stopped
+    logging: *default-logging
     user: "65534:65534"   # nobody — Prometheus image runs as nobody by default
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -140,6 +153,7 @@ services:
     image: prom/mysqld-exporter:${MYSQLD_EXPORTER_VERSION}
     container_name: mysqld-exporter
     restart: unless-stopped
+    logging: *default-logging
     command:
       - --mysqld.address=mysql:3306
       - --mysqld.username=root
@@ -159,6 +173,7 @@ services:
     image: oliver006/redis_exporter:${REDIS_EXPORTER_VERSION}
     container_name: redis-exporter
     restart: unless-stopped
+    logging: *default-logging
     environment:
       - REDIS_ADDR=redis://redis:6379
     networks:
@@ -171,6 +186,7 @@ services:
     image: nginx/nginx-prometheus-exporter:${NGINX_EXPORTER_VERSION}
     container_name: nginx-exporter
     restart: unless-stopped
+    logging: *default-logging
     command:
       - --nginx.scrape-uri=http://nginx:8080/stub_status
     networks:
@@ -183,6 +199,7 @@ services:
     image: hipages/php-fpm_exporter:${PHPFPM_EXPORTER_VERSION}
     container_name: phpfpm-exporter
     restart: unless-stopped
+    logging: *default-logging
     environment:
       - PHP_FPM_SCRAPE_URI=tcp://php-fpm:9000/status
     networks:
@@ -195,6 +212,7 @@ services:
     image: grafana/grafana:${GRAFANA_VERSION}
     container_name: grafana
     restart: unless-stopped
+    logging: *default-logging
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}

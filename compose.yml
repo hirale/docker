@@ -1,4 +1,12 @@
 name: lnmp
+
+# dockerd's default json-file driver never rotates; cap every container's log.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   nginx:
     image: nginx:${NGINX_VERSION}
@@ -8,7 +16,9 @@ services:
       - ${WEB_ROOT}:/var/www
       - ${NGINX_CONFIG}:/etc/nginx
     restart: unless-stopped
+    logging: *default-logging
     ports:
+      - "80:80"
       - "443:443"
     networks:
       - backend
@@ -44,7 +54,17 @@ services:
       - ${PHP_CONFIG}/php/conf.d/docker-php-ext-opcache.ini:/usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
       - ${PHP_CONFIG}/php/conf.d/docker-php-ext-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
       - ${PHP_CONFIG}/logrotate.d:/usr/local/etc/logrotate.d
+      # PHPStan / Rector / nette / Composer caches live under /tmp (GBs); a volume keeps them out of the
+      # container's writable layer, survives a rebuild, and can be dropped on its own.
+      - php-fpm-tmp:/tmp
     restart: unless-stopped
+    logging: *default-logging
+    # Parallel static analysers keep a /dev/shm segment per run; Docker's 64 MB default can
+    # overflow and kill workers with SIGBUS.
+    shm_size: 256m
+    # A crashed PHP process would otherwise dump a GB-sized core into its working directory.
+    ulimits:
+      core: 0
     ports:
       - "5173:5173"
     networks:
@@ -64,7 +84,9 @@ services:
   mysql:
     image: mysql:${MYSQL_VERSION}
     container_name: mysql
-    command: --max-connections=${MYSQL_MAX_CONNECTIONS}
+    # Dev-box tuning: performance_schema off saves ~300MB (turn it back on for mysqld-exporter);
+    # flush-log 2 trades ~1s of commits on a crash for much faster test-database writes.
+    command: --max-connections=${MYSQL_MAX_CONNECTIONS} --skip-log-bin --performance-schema=OFF --innodb-flush-log-at-trx-commit=2
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_ROOT_HOST=%
@@ -77,6 +99,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "--silent" ]
       interval: 10s
@@ -90,6 +113,7 @@ services:
     image: axllent/mailpit:${MAILPIT_VERSION_IMAGE}
     container_name: mailpit
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - backend
     healthcheck:
@@ -103,6 +127,9 @@ services:
     image: redis:${REDIS_VERSION}
     container_name: redis
     restart: unless-stopped
+    logging: *default-logging
+    volumes:
+      - redis-data:/data
     networks:
       - backend
     healthcheck:
@@ -122,6 +149,7 @@ services:
     volumes:
       - ${DOCKER_SOCKET}:/var/run/docker.sock:ro
       - ${OFELIA_CONFIG}:/etc/ofelia/config.ini
+    logging: *default-logging
     networks:
       - backend
 
@@ -133,6 +161,7 @@ services:
     container_name: certbot
     profiles:
       - certbot
+    logging: *default-logging
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/credentials:/credentials:ro
@@ -144,3 +173,5 @@ networks:
 
 volumes:
   mysql-data:
+  redis-data:
+  php-fpm-tmp:

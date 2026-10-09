@@ -4,7 +4,7 @@ ARG MAILPIT_BINARY_VERSION
 FROM php:${PHP_VERSION}-fpm
 WORKDIR /var/www
 
-ARG NODE_MAJOR=22
+ARG NODE_MAJOR=24
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-install -j$(nproc) \
-        gd intl exif bcmath pdo_mysql zip xsl mysqli soap sodium sockets ftp \
+        gd intl exif bcmath pdo_mysql zip xsl mysqli soap sodium sockets ftp pcntl \
     && (docker-php-ext-enable opcache 2>/dev/null || true)
 
 RUN pecl install redis xdebug \

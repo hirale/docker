@@ -1,3 +1,10 @@
+# dockerd's default json-file driver never rotates; cap every container's log.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   php85-fpm:
     build:
@@ -5,7 +12,7 @@ services:
       args:
         PHP_VERSION: "8.5"
         MAILPIT_BINARY_VERSION: ${MAILPIT_BINARY_VERSION:-1.29.3}
-        NODE_MAJOR: ${NODE_MAJOR:-22}
+        NODE_MAJOR: ${NODE_MAJOR:-24}
     container_name: php85-fpm
     user: "www-data"
     working_dir: /var/www
@@ -17,6 +24,7 @@ services:
       - ${PHP_CONFIG}/php/conf.d/docker-php-ext-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
       - ${PHP_CONFIG}/logrotate.d:/usr/local/etc/logrotate.d
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - backend
     extra_hosts:
