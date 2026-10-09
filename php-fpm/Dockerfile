@@ -6,6 +6,13 @@ WORKDIR /var/www
 
 ARG NODE_MAJOR=24
 
+# Debian 11 (bullseye, the base of php:7.4) left security support; its packages now live only on
+# archive.debian.org, and deb.debian.org answers 404 for them.
+RUN if grep -q "^VERSION_CODENAME=bullseye" /etc/os-release; then \
+        sed -i -e "s|http://deb.debian.org/debian-security|http://archive.debian.org/debian-security|" \
+               -e "s|http://deb.debian.org/debian|http://archive.debian.org/debian|" /etc/apt/sources.list; \
+    fi
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
